@@ -11,11 +11,11 @@ const GROUPS = [
 const CHANGELOG = [
   {
     date: "2026-08-28",
-    text: "Initial site setup and data import.",
+    text: "Add mad angel 1+1.",
   },
   {
     date: "2026-08-28",
-    text: "Add mad angel 1+1.",
+    text: "Initial site setup and data import.",
   },
 ];
 
