@@ -15,6 +15,13 @@
 - 1+1 KQ
 - 1+x KBD
 
+## Spade icons to fix
+- N/A
+
+## Notes to add
+- Nex prepots order
+- Toa prepots order
+
 ## Feedback on
 - Any imports going wrong
   - Wrong items
@@ -23,7 +30,7 @@
   - Out of date setups
 - Missing setups
 - Missing item images
-- Missing Setup icons
+- Missing setup icons
 - Setup convertor with zigzag layout
 
 ## Things to check
@@ -33,3 +40,14 @@
 
 ## Code bugs
 - Notes under specific setups cause copy buttons to misalign
+
+## Feature ideas
+- Inventory setups use "fuzzy" items - convertor and setups
+- Zigzag vs "man" toggle
+- Raid setups for each scale / role
+- Guide / FAQ
+  - Setups with similar names will "overwrite" / "leak"
+  - Copy format toggle
+  - Notes
+  - Can be added in "home page" -> changelog at top in scroll box
+- Search bar for setups
