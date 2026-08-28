@@ -1,47 +1,9 @@
-// ---------------------------------------------------------------------------
-// Boss Tags data file
-// ---------------------------------------------------------------------------
-// This is the file you edit to add/update bosses. No build step - just save and
-// upload (or refresh locally). GROUPS controls the sidebar section order/labels.
-//
-// Each boss:
-//   name:  display name + used to build its URL (#boss=slug)
-//   group: must exactly match one of the GROUPS strings below
-//   solo:  array of setups shown in "Solo" mode
-//   duo:   OPTIONAL array of setups shown in "1+1" mode. If you don't provide
-//          this, 1+1 mode just falls back to showing the "solo" setups.
-//   If a group has 2+ setups, they're shown side by side automatically.
-//
-// Each setup is:
-//   {
-//     label: "Melee",
-//     raw: "banktaglayoutsplugin:...",   // Bank Tag Layout export - optional
-//     inventory: "{...}",                 // Inventory Setup JSON - optional
-//     updated: "2026-08-28",              // shown under the setup + should
-//                                          // match a CHANGELOG entry below
-//   }
-// You only need ONE of raw/inventory - the site converts on the fly for
-// whichever format the site-wide toggle is set to. Providing both is fine too
-// (whatever you provide is used as-is instead of being converted).
-//
-// Where "raw" comes from: in-game, right-click your Bank Tags tab in the
-// RuneLite Bank Tags plugin -> copy/export. Paste the WHOLE clipboard
-// contents, unedited.
-// Where "inventory" comes from: the RuneLite Inventory Setups plugin's own
-// export (right-click a setup -> Export), pasted as-is (it's JSON).
-// ---------------------------------------------------------------------------
-
 const GROUPS = [
   "Group",
-  "Skilling",
   "GWD",
-  "DKS",
   "Slayer",
   "Quest",
-  "PvM Minigame",
   "Wilderness",
-  "Raids",
-  "Skilling Minigame",
   "Miscellaneous",
 ];
 
@@ -61,7 +23,6 @@ const CHANGELOG = [
         updated: "2026-08-28",
       },
 */
-
 
 const BOSSES = [
   // -------- Group --------

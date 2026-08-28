@@ -1,9 +1,3 @@
-// ---------------------------------------------------------------------------
-// Boss Tags app logic. No build step, no framework - vanilla JS.
-// Reads data from js/data.js (GROUPS, BOSSES, CHANGELOG), js/items-data.js
-// (ITEM_DATA), and uses js/converter.js for the two setup formats.
-// ---------------------------------------------------------------------------
-
 const WIKI = "https://oldschool.runescape.wiki";
 const COLS = 8;
 
@@ -253,7 +247,6 @@ function renderSetup(setup, headingTag) {
   let layout = null;
 
   try {
-    // Prefer the explicit layout stored in the setup data.
     if (setup.inventory) {
       const parsed = JSON.parse(setup.inventory);
 
@@ -262,7 +255,6 @@ function renderSetup(setup, headingTag) {
       }
     }
 
-    // Fall back to the converter for older setups.
     if (!layout) {
       layout = getSetupLayout(setup);
     }
@@ -320,9 +312,6 @@ function renderSetup(setup, headingTag) {
   return wrap;
 }
 
-// Setups are always shown side by side (wrapping on narrow screens), whether
-// there's one or several - this keeps solo (e.g. Melee + Range) and 1+1
-// (Main + Alt) setups visually consistent.
 function renderSetupRow(setups, headingTag) {
   const row = document.createElement("div");
   row.className = "setup-row";
@@ -401,7 +390,6 @@ function renderBossPage(boss) {
       [soloBlock, duoBlock].forEach((b) => b.classList.toggle("is-visible", b.dataset.mode === mode));
     };
 
-    // Event listeners
     soloBtn.addEventListener("click", () => {
       localStorage.setItem("bossMode", "solo");
       applyMode("solo");
@@ -411,7 +399,6 @@ function renderBossPage(boss) {
       applyMode("duo");
     });
 
-    // Initialize mode based on saved setting
     const savedMode = localStorage.getItem("bossMode");
     if (savedMode === "duo" && hasDuo) {
       applyMode("duo");
@@ -419,7 +406,6 @@ function renderBossPage(boss) {
       applyMode("solo");
     }
   } else {
-    // Only solo or only duo
     if (hasSolo) {
       const soloBlock = document.createElement("div");
       soloBlock.className = "setup-block is-visible";
@@ -437,7 +423,6 @@ function renderBossPage(boss) {
       duoBlock.appendChild(renderSetupRow(boss.duo, "h2"));
       main.appendChild(duoBlock);
     } else {
-      // No setups
       const p = document.createElement("p");
       p.className = "no-setup";
       p.textContent = "No setup data added yet.";

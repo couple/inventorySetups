@@ -1,12 +1,3 @@
-// ---------------------------------------------------------------------------
-// Shared conversion logic between the two RuneLite plugin formats:
-//   - "Bank Tag Layout"  (Bank Tags plugin):     banktaglayoutsplugin:name,id:pos,...,banktag:name,id,id,...
-//   - "Inventory Setup"  (Inventory Setups plugin): { setup: {...}, layout: [ids...] }
-// Both ultimately describe the same flat, position-indexed item layout, so
-// conversion just means re-serializing the same layout array into the other
-// plugin's text format. Ported from the standalone converter tool.
-// ---------------------------------------------------------------------------
-
 const MAX_LAYOUT_SIZE = 250;
 
 function validateLayoutArray(layout) {
@@ -20,7 +11,7 @@ function validateLayoutArray(layout) {
   }
 }
 
-// ---- Bank Tag Layout string -> {name, layout[], banktag} ----
+// ---- Bank Tag Layout -> {name, layout[], banktag} ----
 function parseBankTagLayout(input) {
   const prefix = "banktaglayoutsplugin:";
   const trimmed = input.trim();
@@ -71,7 +62,7 @@ function parseBankTagLayout(input) {
   return { name, layout, banktag: bankTagRecord };
 }
 
-// ---- layout[] -> full Bank Tag Layout string ----
+// ---- layout[] -> full Bank Tag Layout ----
 function layoutToBankTagString(layout, name, banktagOverride) {
   validateLayoutArray(layout);
   const entries = [];
@@ -111,7 +102,7 @@ function layoutToBankTagString(layout, name, banktagOverride) {
   return `banktaglayoutsplugin:${name},${entries.join(",")},${banktag}`;
 }
 
-// ---- full Inventory Setup JSON string -> {name, layout[], banktag} ----
+// ---- full Inventory Setup -> {name, layout[], banktag} ----
 function inventoryJSONToLayout(input) {
   let data;
   try {
@@ -142,7 +133,7 @@ function inventoryJSONToLayout(input) {
   return { name, layout, banktag };
 }
 
-// ---- layout[] -> full Inventory Setup JSON string ----
+// ---- layout[] -> full Inventory Setup ----
 function layoutToInventoryJSON(layout, name) {
   validateLayoutArray(layout);
 

@@ -270,10 +270,6 @@ a:hover {
   overflow-x: auto;
 }
 
-/* Fixed width matches the gear-grid's natural size (8 * 44px cols + gaps +
-   padding + border = 402px) so every column is identical regardless of
-   content - long notes text wraps inside this width instead of stretching
-   the column. */
 .setup-col {
   display: flex;
   flex-direction: column;
@@ -393,7 +389,6 @@ a:hover {
   overflow-wrap: break-word;
 }
 
-/* Mode-level notes (shown once above all setups in that mode, not per-setup) */
 .notes-block.mode-notes {
   display: block;
   width: fit-content;
