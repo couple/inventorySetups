@@ -24,6 +24,17 @@ function setCopyFormat(format) {
   route(); // re-render current page so labels/buttons reflect the new format
 }
 
+// -------- Site-wide grid layout toggle (Default / Zigzag) --------
+
+function getGridStyle() {
+  return localStorage.getItem("gridStyle") || "default";
+}
+
+function setGridStyle(style) {
+  localStorage.setItem("gridStyle", style);
+  route(); // re-render current page so grids reflect the new layout style
+}
+
 // -------- Item icon resolution --------
 
 function resolveItem(id) {
@@ -164,6 +175,10 @@ function resolveItem(id) {
     capitalizedPage = "Tzkal_slayer_helmet";
   }
 
+  if (capitalizedPage === "Purple_sweets") {
+    capitalizedPage = "Purple_sweets_100";
+  }  
+
   return {
     name,
     icon: `${WIKI}/images/${capitalizedPage}.png`,
@@ -236,55 +251,68 @@ function renderNotesToggle(text, extraClass) {
 
 // -------- Single setup block (heading + grid + copy button + updated date) --------
 
+// Renders one setup as 4 separate grid cells (heading, content, button,
+// meta) rather than one wrapping element. renderSetupRow places these
+// directly into a shared CSS Grid (grid-auto-flow: column) so that each
+// row of content - the heading, the gear grid, the copy button, and the
+// updated/notes block - lines up across every column in the row, no
+// matter how tall an individual setup's grid or notes are.
 function renderSetup(setup, headingTag) {
-  const wrap = document.createElement("div");
-  wrap.className = "setup";
+  const style = getGridStyle();
 
-  const h = document.createElement(headingTag);
-  h.textContent = setup.label;
-  wrap.appendChild(h);
+  const heading = document.createElement(headingTag);
+  heading.className = "setup-heading";
+  heading.textContent = setup.label;
+
+  const content = document.createElement("div");
+  content.className = "setup-content";
 
   let layout = null;
-
   try {
-    if (setup.inventory) {
-      const parsed = JSON.parse(setup.inventory);
-
-      if (Array.isArray(parsed.layout)) {
-        layout = parsed.layout;
-      }
-    }
-
-    if (!layout) {
-      layout = getSetupLayout(setup);
-    }
+    layout = getSetupLayout(setup, style);
   } catch (e) {
     console.error("Failed to load setup layout:", setup.label, e);
     layout = null;
   }
 
   const grid = renderGrid(layout);
+  const meta = document.createElement("div");
+  meta.className = "setup-meta";
+  const buttonCell = document.createElement("div");
+  buttonCell.className = "setup-button-cell";
+
   if (!grid) {
     const p = document.createElement("p");
     p.className = "no-setup";
     p.textContent = "No setup data added yet.";
-    wrap.appendChild(p);
-    return wrap;
+    content.appendChild(p);
+    return [heading, content, buttonCell, meta];
   }
-  wrap.appendChild(grid);
+  content.appendChild(grid);
+
+  if (setup.updated) {
+    const updated = document.createElement("div");
+    updated.className = "updated-date";
+    updated.textContent = `Updated as of ${formatDate(setup.updated)}`;
+    meta.appendChild(updated);
+  }
+
+  const notesEl = renderNotesToggle(setup.notes);
+  if (notesEl) meta.appendChild(notesEl);
 
   const format = getCopyFormat();
   let copyText = null;
   try {
-    copyText = getSetupCopyText(setup, format);
+    copyText = getSetupCopyText(setup, format, style);
   } catch (e) {
     copyText = null;
   }
 
+  const usingZigzag = style === "zigzag" && (setup.zigzagRaw || setup.zigzagInventory);
   const btn = document.createElement("button");
   btn.className = "copy-btn";
   const formatLabel = format === "inventory" ? "Inventory Setup" : "Bank Tag Layout";
-  btn.textContent = `Copy (${formatLabel})`;
+  btn.textContent = `Copy (${formatLabel}${usingZigzag ? " · Zigzag" : ""})`;
   if (!copyText) {
     btn.disabled = true;
     btn.title = "Couldn't produce this format for this setup.";
@@ -297,19 +325,9 @@ function renderSetup(setup, headingTag) {
       });
     });
   }
-  wrap.appendChild(btn);
+  buttonCell.appendChild(btn);
 
-  if (setup.updated) {
-    const updated = document.createElement("div");
-    updated.className = "updated-date";
-    updated.textContent = `Updated as of ${formatDate(setup.updated)}`;
-    wrap.appendChild(updated);
-  }
-
-  const notesEl = renderNotesToggle(setup.notes);
-  if (notesEl) wrap.appendChild(notesEl);
-
-  return wrap;
+  return [heading, content, buttonCell, meta];
 }
 
 function renderSetupRow(setups, headingTag) {
@@ -322,11 +340,10 @@ function renderSetupRow(setups, headingTag) {
     row.appendChild(p);
     return row;
   }
+  row.style.gridTemplateColumns = `repeat(${setups.length}, 402px)`;
   setups.forEach((s) => {
-    const col = document.createElement("div");
-    col.className = "setup-col";
-    col.appendChild(renderSetup(s, headingTag));
-    row.appendChild(col);
+    const cells = renderSetup(s, headingTag);
+    cells.forEach((cell) => row.appendChild(cell));
   });
   return row;
 }
@@ -340,6 +357,9 @@ function renderBossPage(boss) {
   const h1 = document.createElement("h1");
   h1.textContent = boss.name;
   main.appendChild(h1);
+
+  const bossNotes = renderNotesToggle(boss.notes, "boss-notes");
+  if (bossNotes) main.appendChild(bossNotes);
 
   const hasSolo = Array.isArray(boss.solo) && boss.solo.length > 0;
   const hasDuo = Array.isArray(boss.duo) && boss.duo.length > 0;
@@ -431,15 +451,35 @@ function renderBossPage(boss) {
   }
 }
 
-// -------- Home page (with changelog) --------
+// -------- Home page (guide + changelog) --------
 
 function renderHome() {
   const main = document.getElementById("main");
   main.innerHTML = "";
 
-  const h1 = document.createElement("h1");
-  h1.textContent = "Changelog";
-  main.appendChild(h1);
+  // Guide
+  const guideHeading = document.createElement("h1");
+  guideHeading.className = "section-heading";
+  guideHeading.textContent = "Guide";
+  main.appendChild(guideHeading);
+
+  const guideList = document.createElement("ul");
+  guideList.className = "guide-list";
+  FAQ.forEach((entry) => {
+    const item = document.createElement("li");
+    const q = document.createElement("strong");
+    q.textContent = entry.q;
+    item.appendChild(q);
+    item.appendChild(document.createTextNode(" " + entry.a));
+    guideList.appendChild(item);
+  });
+  main.appendChild(guideList);
+
+  // Changelog
+  const changelogHeading = document.createElement("h1");
+  changelogHeading.className = "section-heading";
+  changelogHeading.textContent = "Changelog";
+  main.appendChild(changelogHeading);
 
   const list = document.createElement("div");
   list.className = "changelog";
@@ -593,12 +633,12 @@ function buildTopNav() {
   const top = document.getElementById("top-nav");
   top.innerHTML = "";
 
-  const changelogLink = document.createElement("a");
-  changelogLink.className = "boss-link nav-primary";
-  changelogLink.href = "#";
-  changelogLink.textContent = "Changelog";
-  changelogLink.dataset.slug = "";
-  top.appendChild(changelogLink);
+  const homeLink = document.createElement("a");
+  homeLink.className = "boss-link nav-primary";
+  homeLink.href = "#";
+  homeLink.textContent = "Home";
+  homeLink.dataset.slug = "";
+  top.appendChild(homeLink);
 
   const converterLink = document.createElement("a");
   converterLink.className = "boss-link nav-primary";
@@ -640,12 +680,12 @@ function buildFormatToggle() {
   bankBtn.type = "button";
   bankBtn.className = "format-btn";
   bankBtn.dataset.format = "banktag";
-  bankBtn.textContent = "Bank Tag";
+  bankBtn.textContent = "Bank Tag Layout";
   const invBtn = document.createElement("button");
   invBtn.type = "button";
   invBtn.className = "format-btn";
   invBtn.dataset.format = "inventory";
-  invBtn.textContent = "Inventory";
+  invBtn.textContent = "Inventory Setup";
   el.appendChild(bankBtn);
   el.appendChild(invBtn);
 
@@ -662,6 +702,67 @@ function buildFormatToggle() {
     applyActive();
   });
   applyActive();
+}
+
+function buildGridToggle() {
+  const el = document.getElementById("grid-toggle");
+  el.innerHTML = "";
+  const defaultBtn = document.createElement("button");
+  defaultBtn.type = "button";
+  defaultBtn.className = "format-btn";
+  defaultBtn.dataset.style = "default";
+  defaultBtn.textContent = "Default";
+  const zigzagBtn = document.createElement("button");
+  zigzagBtn.type = "button";
+  zigzagBtn.className = "format-btn";
+  zigzagBtn.dataset.style = "zigzag";
+  zigzagBtn.textContent = "Zigzag";
+  el.appendChild(defaultBtn);
+  el.appendChild(zigzagBtn);
+
+  const applyActive = () => {
+    const current = getGridStyle();
+    [defaultBtn, zigzagBtn].forEach((b) => b.classList.toggle("is-active", b.dataset.style === current));
+  };
+  defaultBtn.addEventListener("click", () => {
+    setGridStyle("default");
+    applyActive();
+  });
+  zigzagBtn.addEventListener("click", () => {
+    setGridStyle("zigzag");
+    applyActive();
+  });
+  applyActive();
+}
+
+function buildBossSearch() {
+  const input = document.getElementById("boss-search");
+  if (!input) return;
+
+  input.addEventListener("input", () => {
+    const query = input.value.trim().toLowerCase();
+    let currentGroupHeader = null;
+    let currentGroupHasMatch = false;
+
+    const finishGroup = () => {
+      if (currentGroupHeader) {
+        currentGroupHeader.classList.toggle("is-hidden", !currentGroupHasMatch);
+      }
+    };
+
+    document.querySelectorAll("#sidebar-nav .group-header, #sidebar-nav .boss-link").forEach((el) => {
+      if (el.classList.contains("group-header")) {
+        finishGroup();
+        currentGroupHeader = el;
+        currentGroupHasMatch = false;
+        return;
+      }
+      const matches = !query || el.textContent.toLowerCase().includes(query);
+      el.classList.toggle("is-hidden", !matches);
+      if (matches) currentGroupHasMatch = true;
+    });
+    finishGroup();
+  });
 }
 
 function route() {
@@ -692,5 +793,7 @@ window.addEventListener("DOMContentLoaded", () => {
   buildTopNav();
   buildSidebar();
   buildFormatToggle();
+  //buildGridToggle();
+  buildBossSearch();
   route();
 });

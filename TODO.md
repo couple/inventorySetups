@@ -8,19 +8,21 @@
 - Cerberus solo
 - Thermy 1+1
 - Nex Trio
-- GWD solo setups
+- General Graador solo
+- Kree'arra solo
 - Commander Zilyana 1+1
 - Colo
 - Toa leech / main
 - 1+1 KQ
 - 1+x KBD
+- Maggot king 1+1
 
 ## Spade icons to fix
 - N/A
 
 ## Notes to add
-- Nex prepots order
-- Toa prepots order
+- TOA prepots order
+- Item "leak" warning
 
 ## Feedback on
 - Any imports going wrong
@@ -34,20 +36,16 @@
 - Setup convertor with zigzag layout
 
 ## Things to check
-- Cerberus bclaw vs dclaw
+- Cerberus bclaw vs dclaw vs kisten
 - Sire solo possibly outdated
 - Yama bclaws or something else
+- Doom setup
 
 ## Code bugs
-- Notes under specific setups cause copy buttons to misalign
+- N/A
 
 ## Feature ideas
-- Inventory setups use "fuzzy" items - convertor and setups
-- Zigzag vs "man" toggle
+- Inventory setups use "fuzzy" items - convertor and setups, certain ids -> list of fuzzy ids?
+- Zigzag vs "man" toggle (buttons commented out in index/app + data option)
 - Raid setups for each scale / role
-- Guide / FAQ
-  - Setups with similar names will "overwrite" / "leak"
-  - Copy format toggle
-  - Notes
-  - Can be added in "home page" -> changelog at top in scroll box
-- Search bar for setups
+- Boss icons on sidebar / title

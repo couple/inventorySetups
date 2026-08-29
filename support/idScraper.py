@@ -53,8 +53,8 @@ items = dict(sorted(numeric_items.items(), key=lambda x: int(x[0])))
 
 if "33595" in items:
     items["33596"] = items["33595"]
-if "33639" in items:
-    items["28903"] = items["33639"]
+if "28906" in items:
+    items["28903"] = items["28906"]
 if "27253" in items:
     items["27254"] = items["27253"]
 if "27281" in items:
@@ -108,7 +108,8 @@ if "22328" in items:
 js_content = "const ITEM_DATA = " + json.dumps(items, ensure_ascii=False, separators=(",", ":")) + ";"
 
 # Save to a .js file
-with open("items-data.js", "w", encoding='utf-8') as f:
+outputPath = "../js/items-data.js"
+with open(outputPath, "w", encoding='utf-8') as f:
     f.write(js_content)
 
 print("Saved item data to items-data.js")
