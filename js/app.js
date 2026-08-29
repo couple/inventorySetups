@@ -2,7 +2,19 @@ const WIKI = "https://oldschool.runescape.wiki";
 const COLS = 8;
 
 function slugify(text) {
-  return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/['\u2019]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+// Like slugify, but for setup-type labels in the URL (e.g. "1+1", "1+X").
+// Keeps punctuation like "+" intact instead of turning it into a hyphen -
+// it's valid unescaped in a URL fragment, and reads more naturally.
+function labelToUrlSegment(text) {
+  return text.trim().toLowerCase().replace(/\s+/g, "-");
 }
 
 function formatDate(iso) {
@@ -46,7 +58,7 @@ function resolveItem(id) {
   let cleanPage = page.replace(/#/g, '');
 
   // Remove specific suffixes
-  cleanPage = cleanPage.replace(/[_]?locked$|[_]?charged$|[_]?inventory$|[_]?normal$|[_]?assembled$|[_]?filled$|[_]?closed|[_]?open$|[_]?uncharged$|[_]?active$|[_]?used$|[_]?new$/i, '');
+  cleanPage = cleanPage.replace(/[_]?full$|[_]?locked$|[_]?charged$|[_]?inventory$|[_]?normal$|[_]?assembled$|[_]?filled$|[_]?closed|[_]?open$|[_]?uncharged$|[_]?active$|[_]?used$|[_]?new$/i, '');
   cleanPage = cleanPage.replace(/trimmed/gi, '(t)');
 
   // Capitalize the first letter
@@ -125,6 +137,10 @@ function resolveItem(id) {
   if (capitalizedPage === "Imbued_saradomin_max_cape") {
     capitalizedPage = "Imbued_Saradomin_max_cape";
   }
+
+  if (capitalizedPage === "Coins") {
+    capitalizedPage = "Coins_10000";
+  }  
 
   if (capitalizedPage === "Imbued_zamorak_max_cape") {
     capitalizedPage = "Imbued_Zamorak_max_cape";
@@ -350,7 +366,17 @@ function renderSetupRow(setups, headingTag) {
 
 // -------- Boss page --------
 
-function renderBossPage(boss) {
+// Updates the URL to `#slug/label` (using the boss's own Solo/1+1 style
+// labels) without triggering another hashchange, so switching setup type
+// doesn't force a full re-render.
+function setBossHash(boss, label) {
+  const newHash = `#${slugify(boss.name)}/${labelToUrlSegment(label)}`;
+  if (window.location.hash !== newHash) {
+    history.replaceState(null, "", newHash);
+  }
+}
+
+function renderBossPage(boss, modeParam) {
   const main = document.getElementById("main");
   main.innerHTML = "";
 
@@ -408,6 +434,7 @@ function renderBossPage(boss) {
     const applyMode = (mode) => {
       [soloBtn, duoBtn].forEach((b) => b.classList.toggle("is-active", b.dataset.mode === mode));
       [soloBlock, duoBlock].forEach((b) => b.classList.toggle("is-visible", b.dataset.mode === mode));
+      setBossHash(boss, mode === "duo" ? duoLabel : soloLabel);
     };
 
     soloBtn.addEventListener("click", () => {
@@ -419,8 +446,12 @@ function renderBossPage(boss) {
       applyMode("duo");
     });
 
+    // URL wins if it names a valid, available mode (e.g. shared/bookmarked
+    // link); otherwise fall back to whatever the user used last time.
     const savedMode = localStorage.getItem("bossMode");
-    if (savedMode === "duo" && hasDuo) {
+    if ((modeParam === "solo" && hasSolo) || (modeParam === "duo" && hasDuo)) {
+      applyMode(modeParam);
+    } else if (savedMode === "duo" && hasDuo) {
       applyMode("duo");
     } else {
       applyMode("solo");
@@ -735,12 +766,35 @@ function buildGridToggle() {
   applyActive();
 }
 
+// Lowercases, drops apostrophes (straight or curly), and collapses/trims
+// whitespace so "kril", "k'ril", "k ril" and "K'Ril " all compare equal.
+function normalizeSearchText(str) {
+  return str
+    .toLowerCase()
+    .replace(/['\u2019]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function buildBossSearch() {
   const input = document.getElementById("boss-search");
   if (!input) return;
 
   input.addEventListener("input", () => {
-    const query = input.value.trim().toLowerCase();
+    const query = normalizeSearchText(input.value);
+
+    // If the query matches (fully or partially) one of the nicknames in
+    // BOSS_ALIASES, also match that alias's target boss.
+    const aliasTargets = [];
+    if (query) {
+      Object.entries(BOSS_ALIASES).forEach(([alias, targetName]) => {
+        const normAlias = normalizeSearchText(alias);
+        if (normAlias.includes(query) || query.includes(normAlias)) {
+          aliasTargets.push(normalizeSearchText(targetName));
+        }
+      });
+    }
+
     let currentGroupHeader = null;
     let currentGroupHasMatch = false;
 
@@ -757,7 +811,11 @@ function buildBossSearch() {
         currentGroupHasMatch = false;
         return;
       }
-      const matches = !query || el.textContent.toLowerCase().includes(query);
+      const elText = normalizeSearchText(el.textContent);
+      const matches =
+        !query ||
+        elText.includes(query) ||
+        aliasTargets.some((target) => elText.includes(target));
       el.classList.toggle("is-hidden", !matches);
       if (matches) currentGroupHasMatch = true;
     });
@@ -766,7 +824,12 @@ function buildBossSearch() {
 }
 
 function route() {
-  const slug = window.location.hash.replace(/^#/, "");
+  const hash = window.location.hash.replace(/^#/, "");
+  // Boss pages with both setup types carry the setup label after a slash,
+  // e.g. "#kalphite-queen/solo" or "#general-graardor/1-1" (matching that
+  // boss's own soloLabel/duoLabel). Bosses with only one setup type have
+  // no slash at all.
+  const [slug, modeLabelSlug] = hash.split("/");
 
   document.querySelectorAll(".boss-link").forEach((a) => {
     a.classList.toggle("active", a.dataset.slug === slug);
@@ -785,7 +848,16 @@ function route() {
     renderHome();
     return;
   }
-  renderBossPage(boss);
+
+  let modeParam;
+  if (modeLabelSlug) {
+    const soloLabelSlug = labelToUrlSegment(boss.soloLabel || "Solo");
+    const duoLabelSlug = labelToUrlSegment(boss.duoLabel || "1+1");
+    if (modeLabelSlug === soloLabelSlug) modeParam = "solo";
+    else if (modeLabelSlug === duoLabelSlug) modeParam = "duo";
+  }
+
+  renderBossPage(boss, modeParam);
 }
 
 window.addEventListener("hashchange", route);
