@@ -374,8 +374,17 @@ function semanticToLayout(semantic, style, sourceStyle) {
   return layout;
 }
 
+// ---- Spellbook ("sb") normalization ----
+// Inventory Setups plugin spellbook values: 0 = Standard, 1 = Ancient,
+// 2 = Lunar, 3 = Arceuus. Anything else (including "not specified") falls
+// back to this default, which represents no particular spellbook.
+const DEFAULT_SPELLBOOK = 4;
+function normalizeSpellbook(sb) {
+  return sb === 0 || sb === 1 || sb === 2 || sb === 3 ? sb : DEFAULT_SPELLBOOK;
+}
+
 // ---- semantic slots -> Inventory Setup "setup" object ----
-function semanticToInventorySetup(semantic, name) {
+function semanticToInventorySetup(semantic, name, sb) {
   const inv = semantic.inv.map((id) => (id !== -1 && id !== undefined ? { id } : null));
   const eq = semantic.eq.map((id) => {
     if (id === -1 || id === undefined) return null;
@@ -397,7 +406,7 @@ function semanticToInventorySetup(semantic, name) {
     hc: "#FFFFFFFF",
     fb: true,
     uh: true,
-    sb: 2,
+    sb: normalizeSpellbook(sb),
   };
 }
 
@@ -408,10 +417,10 @@ function semanticToInventorySetup(semantic, name) {
 // how positions are read. The embedded "layout" field is passed through
 // verbatim so this remains a lossless round trip when used within a single
 // style (as it is everywhere except the general-purpose converter).
-function layoutToInventoryJSON(layout, name, layoutType = "default") {
+function layoutToInventoryJSON(layout, name, layoutType = "default", sb) {
   validateLayoutArray(layout);
   const semantic = layoutToSemantic(layout, layoutType);
-  const setup = semanticToInventorySetup(semantic, name);
+  const setup = semanticToInventorySetup(semantic, name, sb);
   return JSON.stringify({ setup, layout }, null, 0);
 }
 
@@ -432,7 +441,9 @@ function oppositeSetupType(type) {
 // style-agnostic semantic form, then renders that out as `outputType` in
 // `outputStyle`. This lets any of the four combinations convert to any
 // other: e.g. Inventory Setup (zigzag) -> Bank Tag Layout (default).
-function convertSetup(input, inputType, inputStyle, outputType, outputStyle) {
+// `sb` (spellbook) only matters when `outputType` is "inventory" - it's
+// ignored for a Bank Tag Layout output, which has no spellbook field.
+function convertSetup(input, inputType, inputStyle, outputType, outputStyle, sb) {
   let name, rawLayout, banktag;
 
   if (inputType === "inventory") {
@@ -447,7 +458,7 @@ function convertSetup(input, inputType, inputStyle, outputType, outputStyle) {
   const outLayout = semanticToLayout(semantic, outputStyle, inputStyle);
 
   if (outputType === "inventory") {
-    const setup = semanticToInventorySetup(semantic, name);
+    const setup = semanticToInventorySetup(semantic, name, sb);
     return JSON.stringify({ setup, layout: outLayout }, null, 0);
   } else if (outputType === "banklayout") {
     return layoutToBankTagString(outLayout, name, banktag);
@@ -464,15 +475,18 @@ function convertSetup(input, inputType, inputStyle, outputType, outputStyle) {
 // truth a setup's data is decoded from; everything else (the default
 // Inventory Setup JSON, and both zigzag variants) is derived from it on
 // the fly, so a boss entry in data.js only needs to provide "raw" (or,
-// failing that, "inventory") and nothing more.
+// failing that, "inventory") and nothing more. An optional "sb" field
+// (0-3) on the setup selects its spellbook for Inventory Setup output;
+// anything else, including a missing "sb", uses the default.
 function getSetupSemantic(setup) {
+  const sb = normalizeSpellbook(setup.sb);
   if (setup.raw) {
     const { name, layout, banktag } = parseBankTagLayout(setup.raw);
-    return { name, banktag, semantic: layoutToSemantic(layout, "default") };
+    return { name, banktag, sb, semantic: layoutToSemantic(layout, "default") };
   }
   if (setup.inventory) {
     const { name, layout, banktag } = inventoryJSONToLayout(setup.inventory);
-    return { name, banktag, semantic: layoutToSemantic(layout, "default") };
+    return { name, banktag, sb, semantic: layoutToSemantic(layout, "default") };
   }
   return null;
 }
@@ -514,7 +528,7 @@ function getSetupCopyText(setup, format, style) {
   const layout = semanticToLayout(base.semantic, style, "default");
 
   if (format === "inventory") {
-    const inventorySetup = semanticToInventorySetup(base.semantic, base.name);
+    const inventorySetup = semanticToInventorySetup(base.semantic, base.name, base.sb);
     return JSON.stringify({ setup: inventorySetup, layout }, null, 0);
   }
   return layoutToBankTagString(layout, base.name, base.banktag);

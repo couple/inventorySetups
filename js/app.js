@@ -560,6 +560,17 @@ function renderConverter() {
       </div>
 
       <div class="field" style="margin-top:16px">
+        <label for="conv-spellbook">Spellbook</label>
+        <select id="conv-spellbook">
+          <option value="4">None</option>
+          <option value="0">Standard</option>
+          <option value="1">Ancient</option>
+          <option value="2">Lunar</option>
+          <option value="3">Arceuus</option>
+        </select>
+      </div>
+
+      <div class="field" style="margin-top:16px">
         <label for="conv-input">Input</label>
         <textarea id="conv-input" spellcheck="false" placeholder="Paste your Bank Tag Layout or Inventory Setup here..."></textarea>
       </div>
@@ -608,6 +619,7 @@ function renderConverter() {
   const outputEl = document.getElementById("conv-output");
   const typeEl = document.getElementById("conv-input-type");
   const inputLayoutEl = document.getElementById("conv-input-layout");
+  const spellbookEl = document.getElementById("conv-spellbook");
   const outputTypeEl = document.getElementById("conv-output-type");
   const outputLayoutEl = document.getElementById("conv-output-layout");
   const statusEl = document.getElementById("conv-status");
@@ -639,7 +651,11 @@ function renderConverter() {
       let outputStyle = outputLayoutEl.value;
       if (outputStyle === "auto") outputStyle = inputStyle;
 
-      const result = convertSetup(input, inputType, inputStyle, outputType, outputStyle);
+      // Spellbook only matters for an Inventory Setup output - it's simply
+      // ignored (per convertSetup) for a Bank Tag Layout output.
+      const sb = parseInt(spellbookEl.value, 10);
+
+      const result = convertSetup(input, inputType, inputStyle, outputType, outputStyle, sb);
       outputEl.value = result;
       setStatus(
         `Converted ${typeLabel(inputType)} (${styleLabel(inputStyle)}) -> ${typeLabel(outputType)} (${styleLabel(outputStyle)}).`,

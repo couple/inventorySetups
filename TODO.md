@@ -43,11 +43,11 @@
 - Doom setup
 
 ## Code bugs
-- Inventory setups spellbook (set var in data)
+- N/A
 
 ## Feature ideas
 - Inventory setups use "fuzzy" items - convertor and setups, certain ids -> list of fuzzy ids?
 - Raid setups for each scale / role
 - Boss icons on sidebar / title
 - Convertor auto-detect input layout
-- inventory setups -> bank tag layout - define icon
+- Inventory setups -> bank tag layout - define icon
