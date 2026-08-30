@@ -324,7 +324,8 @@ function renderSetup(setup, headingTag) {
     copyText = null;
   }
 
-  const usingZigzag = style === "zigzag" && (setup.zigzagRaw || setup.zigzagInventory);
+  const usingZigzag =
+    style === "zigzag" && (setup.zigzagRaw || setup.zigzagInventory || setup.raw || setup.inventory);
   const btn = document.createElement("button");
   btn.className = "copy-btn";
   const formatLabel = format === "inventory" ? "Inventory Setup" : "Bank Tag Layout";
@@ -542,17 +543,25 @@ function renderConverter() {
 
     <div class="converter-card">
       <div class="field">
-        <label for="conv-input-type">Input type</label>
+        <label for="conv-input-type">Input plugin</label>
         <select id="conv-input-type">
           <option value="auto">Auto-detect</option>
-          <option value="inventory">Inventory Setup</option>
           <option value="banklayout">Bank Tag Layout</option>
+          <option value="inventory">Inventory Setup</option>
+        </select>
+      </div>
+
+      <div class="field" style="margin-top:16px">
+        <label for="conv-input-layout">Input layout</label>
+        <select id="conv-input-layout">
+          <option value="default">Default</option>
+          <option value="zigzag">Zigzag</option>
         </select>
       </div>
 
       <div class="field" style="margin-top:16px">
         <label for="conv-input">Input</label>
-        <textarea id="conv-input" spellcheck="false" placeholder="Paste your Inventory Setup or Bank Tag Layout here..."></textarea>
+        <textarea id="conv-input" spellcheck="false" placeholder="Paste your Bank Tag Layout or Inventory Setup here..."></textarea>
       </div>
 
       <div class="converter-actions">
@@ -562,6 +571,26 @@ function renderConverter() {
       </div>
 
       <div id="conv-status" class="converter-status"></div>
+    </div>
+
+    <div class="converter-card">
+      <div class="field">
+        <label for="conv-output-type">Output plugin</label>
+        <select id="conv-output-type">
+          <option value="auto">Auto (opposite of input)</option>
+          <option value="banklayout">Bank Tag Layout</option>
+          <option value="inventory">Inventory Setup</option>
+        </select>
+      </div>
+
+      <div class="field" style="margin-top:16px">
+        <label for="conv-output-layout">Output layout</label>
+        <select id="conv-output-layout">
+          <option value="auto">Auto (same as input layout)</option>
+          <option value="default">Default</option>
+          <option value="zigzag">Zigzag</option>
+        </select>
+      </div>
     </div>
 
     <div class="converter-card">
@@ -578,12 +607,18 @@ function renderConverter() {
   const inputEl = document.getElementById("conv-input");
   const outputEl = document.getElementById("conv-output");
   const typeEl = document.getElementById("conv-input-type");
+  const inputLayoutEl = document.getElementById("conv-input-layout");
+  const outputTypeEl = document.getElementById("conv-output-type");
+  const outputLayoutEl = document.getElementById("conv-output-layout");
   const statusEl = document.getElementById("conv-status");
 
   function setStatus(message, type) {
     statusEl.textContent = message;
     statusEl.className = "converter-status" + (type ? " " + type : "");
   }
+
+  const typeLabel = (type) => (type === "inventory" ? "Inventory Setup" : "Bank Tag Layout");
+  const styleLabel = (style) => (style === "zigzag" ? "Zigzag" : "Default");
 
   function convert() {
     const input = inputEl.value.trim();
@@ -593,22 +628,23 @@ function renderConverter() {
       return;
     }
     try {
-      let type = typeEl.value;
-      if (type === "auto") type = detectSetupType(input);
+      let inputType = typeEl.value;
+      if (inputType === "auto") inputType = detectSetupType(input);
 
-      let result;
-      if (type === "inventory") {
-        const { name, layout, banktag } = inventoryJSONToLayout(input);
-        result = layoutToBankTagString(layout, name, banktag);
-        setStatus("Converted Inventory Setup -> Bank Tag Layout.", "success");
-      } else if (type === "banklayout") {
-        const { name, layout } = parseBankTagLayout(input);
-        result = layoutToInventoryJSON(layout, name);
-        setStatus("Converted Bank Tag Layout -> Inventory Setup.", "success");
-      } else {
-        throw new Error("Unknown input type.");
-      }
+      const inputStyle = inputLayoutEl.value;
+
+      let outputType = outputTypeEl.value;
+      if (outputType === "auto") outputType = oppositeSetupType(inputType);
+
+      let outputStyle = outputLayoutEl.value;
+      if (outputStyle === "auto") outputStyle = inputStyle;
+
+      const result = convertSetup(input, inputType, inputStyle, outputType, outputStyle);
       outputEl.value = result;
+      setStatus(
+        `Converted ${typeLabel(inputType)} (${styleLabel(inputStyle)}) -> ${typeLabel(outputType)} (${styleLabel(outputStyle)}).`,
+        "success"
+      );
     } catch (error) {
       outputEl.value = "";
       setStatus(error.message, "error");
@@ -626,10 +662,27 @@ function renderConverter() {
       setStatus("Convert something first.", "error");
       return;
     }
+
+    // Resolve any "auto" choices to concrete values first, since after the
+    // swap they'd otherwise resolve relative to the new (swapped) input
+    // instead of mirroring what was actually produced.
+    let inputType = typeEl.value;
+    if (inputType === "auto") inputType = detectSetupType(inputEl.value.trim());
+    const inputStyle = inputLayoutEl.value;
+    let outputType = outputTypeEl.value;
+    if (outputType === "auto") outputType = oppositeSetupType(inputType);
+    let outputStyle = outputLayoutEl.value;
+    if (outputStyle === "auto") outputStyle = inputStyle;
+
     const oldInput = inputEl.value;
     inputEl.value = outputEl.value;
     outputEl.value = oldInput;
-    typeEl.value = inputEl.value.trim().startsWith("banktaglayoutsplugin:") ? "banklayout" : "inventory";
+
+    typeEl.value = outputType;
+    inputLayoutEl.value = outputStyle;
+    outputTypeEl.value = inputType;
+    outputLayoutEl.value = inputStyle;
+
     setStatus("Input and output swapped.", "success");
   }
 
@@ -825,10 +878,6 @@ function buildBossSearch() {
 
 function route() {
   const hash = window.location.hash.replace(/^#/, "");
-  // Boss pages with both setup types carry the setup label after a slash,
-  // e.g. "#kalphite-queen/solo" or "#general-graardor/1-1" (matching that
-  // boss's own soloLabel/duoLabel). Bosses with only one setup type have
-  // no slash at all.
   const [slug, modeLabelSlug] = hash.split("/");
 
   document.querySelectorAll(".boss-link").forEach((a) => {
@@ -865,7 +914,7 @@ window.addEventListener("DOMContentLoaded", () => {
   buildTopNav();
   buildSidebar();
   buildFormatToggle();
-  //buildGridToggle();
+  buildGridToggle();
   buildBossSearch();
   route();
 });

@@ -15,6 +15,7 @@
 - Maggot king 1+1
 - PNM alt/resupply
 - Chaos ele
+- All zigzag
 
 ## Spade icons to fix
 - N/A
@@ -33,6 +34,7 @@
 - Missing setups
 - Missing item images
 - Missing setup icons
+- No offhand quiver slot up 1?
 
 ## Things to check
 - Cerberus bclaw vs dclaw vs kisten
@@ -41,11 +43,11 @@
 - Doom setup
 
 ## Code bugs
-- N/A
+- Inventory setups spellbook (set var in data)
 
 ## Feature ideas
 - Inventory setups use "fuzzy" items - convertor and setups, certain ids -> list of fuzzy ids?
-- Zigzag vs "man" toggle (buttons commented out in index/app + data option) - convertor and setups
-- Zigzag convertor different values for side panel
 - Raid setups for each scale / role
 - Boss icons on sidebar / title
+- Convertor auto-detect input layout
+- inventory setups -> bank tag layout - define icon
