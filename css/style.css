@@ -125,10 +125,14 @@ a:hover {
   margin-bottom: 4px;
 }
 
+.sidebar-search-field {
+  position: relative;
+}
+
 .sidebar-search {
   width: 100%;
   box-sizing: border-box;
-  padding: 6px 10px;
+  padding: 6px 26px 6px 10px;
   background: #111214;
   color: var(--text);
   border: 1px solid var(--border);
@@ -144,6 +148,35 @@ a:hover {
 
 .sidebar-search:focus {
   border-color: var(--accent-dim);
+}
+
+.sidebar-search-clear {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.sidebar-search-clear:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.sidebar-search-field.has-value .sidebar-search-clear {
+  display: flex;
 }
 
 .group-header {

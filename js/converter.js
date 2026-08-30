@@ -428,7 +428,7 @@ function detectSetupType(input) {
   const trimmed = input.trim();
   if (trimmed.startsWith("banktaglayoutsplugin:")) return "banklayout";
   if (trimmed.startsWith("{") || trimmed.startsWith("[")) return "inventory";
-  throw new Error("Could not automatically detect the input format. Paste Inventory Setup JSON or a banktaglayoutsplugin string.");
+  throw new Error("Could not automatically detect the input plugin. Paste a Inventory Setup JSON or Bank Tag Layout string.");
 }
 
 function oppositeSetupType(type) {

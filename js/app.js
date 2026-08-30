@@ -539,7 +539,7 @@ function renderConverter() {
 
   main.innerHTML = `
     <h1>Setup Converter</h1>
-    <p class="empty-state">Convert between Bank Tag Layout and Inventory Setups.</p>
+    <p class="empty-state">Convert between setup plugins and layouts.</p>
 
     <div class="converter-card">
       <div class="field">
@@ -847,10 +847,14 @@ function normalizeSearchText(str) {
 
 function buildBossSearch() {
   const input = document.getElementById("boss-search");
+  const clearBtn = document.getElementById("boss-search-clear");
+  const field = input ? input.closest(".sidebar-search-field") : null;
   if (!input) return;
 
-  input.addEventListener("input", () => {
+  const runFilter = () => {
     const query = normalizeSearchText(input.value);
+
+    if (field) field.classList.toggle("has-value", input.value.length > 0);
 
     // If the query matches (fully or partially) one of the nicknames in
     // BOSS_ALIASES, also match that alias's target boss.
@@ -889,7 +893,17 @@ function buildBossSearch() {
       if (matches) currentGroupHasMatch = true;
     });
     finishGroup();
-  });
+  };
+
+  input.addEventListener("input", runFilter);
+
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      input.value = "";
+      runFilter();
+      input.focus();
+    });
+  }
 }
 
 function route() {
