@@ -105,6 +105,18 @@ if "558" in items:
     items["13703"] = items["558"]
 if "560" in items:
     items["13705"] = items["560"]
+if "24425" in items:
+    items["24510"] = items["24425"]
+if "27238" in items:
+    items["27240"] = items["27238"]
+if "12926" in items:
+    items["15315"] = items["12926"]
+if "12002" in items:
+    items["14004"] = items["12002"]
+if "20997" in items:
+    items["20999"] = items["20997"]
+if "22326" in items:
+    items["22489"] = items["22326"]
 
 
 

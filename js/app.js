@@ -113,9 +113,40 @@ function resolveItem(id) {
     capitalizedPage = "Berserker_ring_(i)";
   }
 
-
   if (capitalizedPage === "Tome_of_fire") {
     capitalizedPage = "Tome_of_Fire";
+  }
+
+  if (capitalizedPage === "Eldritch_nightmare_staff") {
+    capitalizedPage = "Eldritch_Nightmare_staff";
+  }
+
+  if (capitalizedPage === "Blade_of_saeldor_(c)_(iorwerth)") {
+    capitalizedPage = "Blade_of_Saeldor_(c)_(Iorwerth)";
+  }
+
+  if (capitalizedPage === "Burning_amulet(5)") {
+    capitalizedPage = "Burning_amulet";
+  }
+
+  if (capitalizedPage === "Burning_amulet(4)") {
+    capitalizedPage = "Burning_amulet";
+  }
+
+  if (capitalizedPage === "Burning_amulet(3)") {
+    capitalizedPage = "Burning_amulet";
+  }
+
+  if (capitalizedPage === "Burning_amulet(2)") {
+    capitalizedPage = "Burning_amulet";
+  }
+
+  if (capitalizedPage === "Burning_amulet(1)") {
+    capitalizedPage = "Burning_amulet";
+  }
+
+  if (capitalizedPage === "Diamond_bolts_(e)") {
+    capitalizedPage = "Diamond_bolts_(e)_5";
   }
 
   if (capitalizedPage === "Ring_of_wealth_(i)(i5)") {

@@ -134,7 +134,7 @@ function inventoryJSONToLayout(input) {
   if (data && typeof data.banktag === "string") banktag = data.banktag.trim();
   else if (setup && typeof setup.banktag === "string") banktag = setup.banktag.trim();
 
-  return { name, layout, banktag };
+  return { name, layout, banktag, setup };
 }
 
 // ---- Grid layout styles ----
@@ -209,6 +209,97 @@ function getEqOrder(map) {
   return { slotOrder, posOrder };
 }
 
+// ---- Rune pouch item detection ----
+// Real rune items are named exactly "<Word> rune" (e.g. "Air rune", "Blood
+// rune", "Steam rune") with no other qualifier - this deliberately excludes
+// look-alikes like "Rune platebody", "Rune arrowtips", or "Rune pouch".
+// Relies on ITEM_DATA (from items-data.js) being loaded first.
+const RUNE_NAME_PATTERN = /^[A-Za-z]+ [Rr]une$/;
+function isRuneItem(id) {
+  if (typeof ITEM_DATA === "undefined") return false;
+  const entry = ITEM_DATA[id];
+  return !!entry && RUNE_NAME_PATTERN.test(entry[0]);
+}
+
+// Rune pouches hold up to 4 runes.
+const RUNE_POUCH_SIZE = 4;
+
+// Matches a real, usable rune pouch container ("Rune pouch", "Divine rune
+// pouch", including their various charged/locked/minigame variants), but
+// not a "Rune pouch note" (a bank note can't hold runes). Runes are only
+// gathered into `rp` when one of these is actually present in the main
+// inventory - otherwise there's nothing to hold them.
+function isRunePouchContainer(id) {
+  if (typeof ITEM_DATA === "undefined") return false;
+  const entry = ITEM_DATA[id];
+  if (!entry) return false;
+  const name = entry[0].toLowerCase();
+  if (name.includes("note")) return false;
+  return name.startsWith("rune pouch") || name.startsWith("divine rune pouch");
+}
+
+// Divine rune pouch variants (normal, locked). The Inventory Setups plugin
+// fuzzy-matches these with an "f" flag on the item entry so that any
+// variant/charge state of the pouch satisfies the setup, rather than
+// requiring the exact one on record.
+const FUZZY_MATCH_ITEM_IDS = new Set([27281, 27510, 27509, 27282]);
+
+// Adds the plugin's "f": true fuzzy-match flag to an item entry when its id
+// is one of FUZZY_MATCH_ITEM_IDS - otherwise returns the entry unchanged.
+function withFuzzyFlag(entry) {
+  if (!entry || typeof entry !== "object" || !FUZZY_MATCH_ITEM_IDS.has(entry.id)) return entry;
+  return { ...entry, f: true };
+}
+
+// Applies withFuzzyFlag across every item-entry field of an Inventory Setup
+// "setup" object (inv/eq/rp/qv arrays, afi dict) in place, then returns it.
+function applyFuzzyFlags(setup) {
+  if (!setup) return setup;
+  for (const key of ["inv", "eq", "rp", "qv"]) {
+    if (Array.isArray(setup[key])) setup[key] = setup[key].map(withFuzzyFlag);
+  }
+  if (setup.afi && typeof setup.afi === "object") {
+    const afi = {};
+    for (const [id, entry] of Object.entries(setup.afi)) afi[id] = withFuzzyFlag(entry);
+    setup.afi = afi;
+  }
+  return setup;
+}
+
+// ---- Legs-slot item detection ----
+// Used to resolve a decoding ambiguity in the zigzag equipment block (see
+// below): matches common legs-slot naming conventions ("Bandos tassets",
+// "Rune platelegs", "Zamorak plateskirt", "Studded chaps", "Ancestral robe
+// bottom", "Fremennik kilt", etc), ignoring a trailing recolour/variant
+// qualifier like "(g)" or "(f)".
+const LEG_ITEM_SUFFIXES = [
+  "platelegs",
+  "plateskirt",
+  "chaps",
+  "tassets",
+  "trousers",
+  "legs",
+  "robe bottom",
+  "robe bottoms",
+  "skirt",
+  "kilt",
+];
+function isLegItem(id) {
+  if (typeof ITEM_DATA === "undefined") return false;
+  const entry = ITEM_DATA[id];
+  if (!entry) return false;
+  const base = entry[0]
+    .replace(/\s*\([^)]*\)\s*$/, "")
+    .trim()
+    .toLowerCase();
+  return LEG_ITEM_SUFFIXES.some((suffix) => base.endsWith(suffix));
+}
+
+// Equipment slot index of the shield/off-hand slot within the semantic
+// `eq` array - the slot most commonly left empty, and so the one most at
+// risk of the zigzag decoding ambiguity below.
+const SHIELD_SLOT = 5;
+
 // ---- layout[] (positions, arranged per `style`) -> semantic slots ----
 // The semantic form is style-agnostic: inv[i] always means "inventory slot
 // i+1", eq[i] always means the same equipment slot, etc, regardless of
@@ -222,22 +313,88 @@ function layoutToSemantic(layout, style) {
   const inv = map.inv.map((idx) => at(idx));
   const eq = map.eq.map((idx) => (idx === null ? -1 : at(idx)));
 
-  let rp = map.rp.map((idx) => at(idx)).filter((id) => id !== -1);
-  let usedRpIndices = map.rp;
-  if (rp.length === 0 && map.rpBackup && map.rpBackup.length) {
-    rp = map.rpBackup.map((idx) => at(idx)).filter((id) => id !== -1);
-    usedRpIndices = map.rpBackup;
+  if (map.eqCompact) {
+    // Zigzag's equipment block is packed with no gaps for an empty slot
+    // (see `eqCompact` above), so decoding it positionally is ambiguous
+    // whenever the shield/off-hand slot - by far the most commonly empty
+    // one, e.g. with a two-handed weapon - was skipped: everything from
+    // legs onward would be misread one slot early, landing a legs-slot
+    // item in "shield" instead. Detect that by item identity and shift
+    // shield onward back into their correct slots, leaving shield empty.
+    const shieldValue = eq[SHIELD_SLOT];
+    if (shieldValue !== -1 && isLegItem(shieldValue)) {
+      const { slotOrder } = getEqOrder(map);
+      const shieldOrderPos = slotOrder.indexOf(SHIELD_SLOT);
+      if (shieldOrderPos !== -1) {
+        const oldValues = slotOrder.map((slot) => eq[slot]);
+        for (let i = slotOrder.length - 1; i > shieldOrderPos; i--) {
+          eq[slotOrder[i]] = oldValues[i - 1];
+        }
+        eq[SHIELD_SLOT] = -1;
+      }
+    }
   }
+
+  // The rune pouch's *positions* only decide which grid slots are treated
+  // as "reserved for rp" (and so excluded from AFI) - primary is always
+  // reserved, and backup only when primary has no data at all, exactly as
+  // before. Its *contents*, however, are determined purely by item
+  // identity: any actual rune item found anywhere outside the inventory
+  // slots (equipment, rune pouch positions, quiver, or plain AFI spots),
+  // read off in ascending grid position order, up to a rune pouch's
+  // capacity - never a non-rune item, even if it happens to occupy a rune
+  // pouch position - and only gathered at all when a real rune pouch
+  // container is actually present in the main inventory; loose runes
+  // lying around with no pouch to hold them aren't rp data.
+  const primaryHasAnyData = map.rp.some((idx) => at(idx) !== -1);
+  const usedRpIndices = primaryHasAnyData || !(map.rpBackup && map.rpBackup.length) ? map.rp : map.rpBackup;
 
   const qv = at(map.qv);
 
-  // Everything not used by inventory/equipment/rune pouch/quiver is an
-  // "additional free item" (AFI) - kept with its original grid position so
-  // it can be placed sensibly if re-rendered in the same style. Only the
-  // rune pouch index set actually in use (primary or backup, whichever
-  // supplied `rp`) is excluded here - the other one is left available for
-  // AFI, so an item sitting in an unused backup/primary position isn't
-  // silently dropped.
+  const inventoryPositions = new Set(map.inv);
+
+  // If the rune pouch's own grid positions (whichever set is in use - see
+  // above) are entirely filled and every one of them is a genuine rune,
+  // that's trusted directly as a complete, self-evident rune pouch - no
+  // container item needed. Otherwise (missing/partial data, or something
+  // non-rune sitting there) fall back to gathering any rune found anywhere
+  // outside the inventory, but only when an actual rune pouch container is
+  // present in the main inventory to justify treating scattered runes as
+  // pouch contents at all.
+  const usedRpValues = usedRpIndices.map((idx) => at(idx));
+  const usedRpComplete = usedRpValues.length > 0 && usedRpValues.every((id) => id !== -1);
+  const usedRpAllRunes = usedRpComplete && usedRpValues.every((id) => isRuneItem(id));
+
+  let rp = [];
+  if (usedRpAllRunes) {
+    rp = usedRpValues.slice(0, RUNE_POUCH_SIZE);
+  } else {
+    const hasRunePouchContainer = inv.some((id) => id !== -1 && isRunePouchContainer(id));
+    if (hasRunePouchContainer) {
+      for (let i = 0; i < layout.length && rp.length < RUNE_POUCH_SIZE; i++) {
+        if (inventoryPositions.has(i)) continue;
+        const id = layout[i];
+        if (id !== -1 && id !== undefined && isRuneItem(id)) rp.push(id);
+      }
+    }
+  }
+
+  // The literal, unfiltered content originally sitting at the rune pouch
+  // positions in use - kept so a same-style "identity" re-encode (see
+  // semanticToLayout) can restore the grid exactly as it was, even where
+  // that content isn't actually a rune and so doesn't appear in `rp`
+  // above. Style-converting re-encodes ignore this and place `rp` (the
+  // real runes) into the new style's rune pouch positions instead.
+  const rpRaw = usedRpIndices.map((idx) => ({ idx, id: at(idx) })).filter((entry) => entry.id !== -1);
+
+  // Everything not used by inventory/equipment/rune pouch (position)/quiver
+  // is an "additional free item" (AFI) - kept with its original grid
+  // position so it can be placed sensibly if re-rendered in the same
+  // style. A rune pouch position is excluded here regardless of whether
+  // its contents actually made it into `rp` above (a non-rune item sitting
+  // there is simply dropped, not turned into AFI) - but a non-reserved
+  // position that happened to supply a rune is still recorded as AFI too,
+  // same as any other item there.
   const excludedIndices = new Set([
     ...map.inv,
     ...map.eq.filter((idx) => idx !== null),
@@ -252,7 +409,17 @@ function layoutToSemantic(layout, style) {
     if (id !== -1 && id !== undefined) afi.push({ id, pos: i });
   }
 
-  return { inv, eq, rp, qv, afi };
+  // No real rune pouch container justifies treating the rune pouch cells
+  // as pouch content (`rp` ended up empty) - but real items may still be
+  // sitting there (loose runes with nothing to hold them). Rather than
+  // silently dropping them (they were excluded from the loop above along
+  // with the rest of the rune pouch cells), surface them as ordinary AFI
+  // items at their original position.
+  if (rp.length === 0 && rpRaw.length > 0) {
+    rpRaw.forEach(({ idx, id }) => afi.push({ id, pos: idx }));
+  }
+
+  return { inv, eq, rp, qv, afi, rpRaw };
 }
 
 // ---- semantic slots -> layout[] (positions, arranged per `style`) ----
@@ -289,31 +456,57 @@ function semanticToLayout(semantic, style, sourceStyle) {
     });
   }
 
-  (semantic.rp || []).forEach((id, i) => {
-    if (id === -1 || id === undefined) return;
-    const idx = map.rp[i];
-    if (idx !== undefined) occupied.set(idx, id);
-  });
+  const isIdentity = style === "default" && sourceStyle === "default";
+
+  if (isIdentity && semantic.rpRaw && semantic.rp && semantic.rp.length > 0) {
+    // No style change, and a real rune pouch is in use: restore whatever
+    // was literally sitting at the rune pouch positions, unchanged -
+    // including a non-rune item that doesn't appear in `rp` - rather than
+    // relocating the computed rune-only `rp` into those positions, which
+    // could otherwise overwrite genuine grid content with different items.
+    semantic.rpRaw.forEach(({ idx, id }) => occupied.set(idx, id));
+  } else if (isIdentity && semantic.rpRaw && semantic.rpRaw.length > 0) {
+    // No style change, but no real rune pouch container justifies the
+    // items sitting in those cells being pouch content: compact them into
+    // the same cell block (dropping any gap) instead of leaving them
+    // scattered at their original, possibly non-adjacent positions.
+    semantic.rpRaw.forEach(({ id }, i) => {
+      const idx = map.rp[i];
+      if (idx !== undefined) occupied.set(idx, id);
+    });
+  } else if (!isIdentity) {
+    (semantic.rp || []).forEach((id, i) => {
+      if (id === -1 || id === undefined) return;
+      const idx = map.rp[i];
+      if (idx !== undefined) occupied.set(idx, id);
+    });
+  }
 
   if (semantic.qv !== -1 && semantic.qv !== undefined) {
     occupied.set(map.qv, semantic.qv);
   }
 
   // Every position this style reserves for a semantic slot - inventory,
-  // equipment, rune pouch (both primary and backup), quiver - even when
-  // that particular slot happens to be empty right now. AFI items must
-  // never land on one of these, or decoding would misread them back as
-  // whatever semantic slot that position maps to instead of as AFI.
+  // equipment, rune pouch, quiver - even when that particular slot happens
+  // to be empty right now. AFI items must never land on one of these, or
+  // decoding would misread them back as whatever semantic slot that
+  // position maps to instead of as AFI. The rune pouch *backup* positions
+  // are only reserved when they're actually load-bearing - i.e. when
+  // there's no primary rune pouch data, so a later decode would fall back
+  // to reading rp from there. When primary rp data exists (as encoded
+  // here always writes it), the backup positions are never touched by
+  // encoding and are safe to hand to AFI items instead.
+  const rpNeedsBackup = !(semantic.rp && semantic.rp.length > 0) && map.rpBackup && map.rpBackup.length > 0;
   const reserved = new Set([
     ...map.inv,
     ...map.eq.filter((idx) => idx !== null),
     ...map.rp,
-    ...(map.rpBackup || []),
+    ...(rpNeedsBackup ? map.rpBackup : []),
     map.qv,
   ]);
   const reservedMax = reserved.size ? Math.max(...reserved) : -1;
 
-  if (style === "default" && sourceStyle === "default") {
+  if (isIdentity) {
     // No style change: keep each AFI item at its original grid position
     // where that's still free and falls within the first fully free row -
     // close enough to the rest of the layout that preserving it doesn't
@@ -324,8 +517,15 @@ function semanticToLayout(semantic, style, sourceStyle) {
     const firstFreeRowStart = reservedMax < 0 ? 0 : Math.ceil((reservedMax + 1) / GRID_COLS) * GRID_COLS;
     const firstFreeRowEnd = firstFreeRowStart + GRID_COLS - 1;
 
+    // Items that came from the rune pouch cells (with no real pouch to
+    // justify them being there) were already placed above, compacted into
+    // that cell block - skip them here so they don't also get placed a
+    // second time as an ordinary AFI item.
+    const rpRawIndices = new Set((semantic.rpRaw || []).map((entry) => entry.idx));
+
     const deferred = [];
     for (const { id, pos } of semantic.afi || []) {
+      if (rpRawIndices.has(pos)) continue;
       if (isPlaceable(pos) && pos <= firstFreeRowEnd) {
         occupied.set(pos, id);
       } else {
@@ -349,8 +549,14 @@ function semanticToLayout(semantic, style, sourceStyle) {
     const firstFreeRowStart =
       reservedMax < 0 ? 0 : (Math.floor(reservedMax / GRID_COLS) + (map.afiRowOffset || 0)) * GRID_COLS;
 
+    // AFI items whose id is also being placed into the rune pouch below
+    // are skipped here entirely - otherwise the same item would end up
+    // duplicated at two different grid positions (once as rp, once as a
+    // separate AFI entry). The remaining items simply shift up to fill
+    // the gap left behind.
+    const rpIds = new Set(semantic.rp || []);
     const afiOrder = (semantic.afi || [])
-      .slice()
+      .filter((entry) => !rpIds.has(entry.id))
       .sort((a, b) => {
         const colA = a.pos % GRID_COLS;
         const colB = b.pos % GRID_COLS;
@@ -390,13 +596,19 @@ function semanticToInventorySetup(semantic, name, sb) {
     if (id === -1 || id === undefined) return null;
     return id === 10 ? { id, q: 77589 } : { id };
   });
-  const rp = semantic.rp.length > 0 ? semantic.rp.map((id) => ({ id, q: 100000 })) : [null];
+  // Always a fixed 4 slots (a divine rune pouch's capacity), padding
+  // unused slots with null rather than shortening the array.
+  const rp = [];
+  for (let i = 0; i < RUNE_POUCH_SIZE; i++) {
+    const id = semantic.rp[i];
+    rp.push(id !== undefined ? { id, q: 100000 } : null);
+  }
   const qv = semantic.qv !== -1 && semantic.qv !== undefined ? [{ id: semantic.qv, q: 100000 }] : [null];
 
   const afi = {};
   for (const { id } of semantic.afi || []) afi[id] = { id };
 
-  return {
+  return applyFuzzyFlags({
     inv,
     eq: eq.length > 0 ? eq : null,
     rp,
@@ -407,7 +619,7 @@ function semanticToInventorySetup(semantic, name, sb) {
     fb: true,
     uh: true,
     sb: normalizeSpellbook(sb),
-  };
+  });
 }
 
 // ---- layout[] -> full Inventory Setup ----
@@ -428,7 +640,7 @@ function detectSetupType(input) {
   const trimmed = input.trim();
   if (trimmed.startsWith("banktaglayoutsplugin:")) return "banklayout";
   if (trimmed.startsWith("{") || trimmed.startsWith("[")) return "inventory";
-  throw new Error("Could not automatically detect the input plugin. Paste a Inventory Setup JSON or Bank Tag Layout string.");
+  throw new Error("Could not automatically detect the input plugin. Paste an Inventory Setup or Bank Tag Layout.");
 }
 
 function oppositeSetupType(type) {
@@ -444,10 +656,10 @@ function oppositeSetupType(type) {
 // `sb` (spellbook) only matters when `outputType` is "inventory" - it's
 // ignored for a Bank Tag Layout output, which has no spellbook field.
 function convertSetup(input, inputType, inputStyle, outputType, outputStyle, sb) {
-  let name, rawLayout, banktag;
+  let name, rawLayout, banktag, origSetup;
 
   if (inputType === "inventory") {
-    ({ name, layout: rawLayout, banktag } = inventoryJSONToLayout(input));
+    ({ name, layout: rawLayout, banktag, setup: origSetup } = inventoryJSONToLayout(input));
   } else if (inputType === "banklayout") {
     ({ name, layout: rawLayout, banktag } = parseBankTagLayout(input));
   } else {
@@ -455,12 +667,51 @@ function convertSetup(input, inputType, inputStyle, outputType, outputStyle, sb)
   }
 
   const semantic = layoutToSemantic(rawLayout, inputStyle);
-  const outLayout = semanticToLayout(semantic, outputStyle, inputStyle);
 
   if (outputType === "inventory") {
+    // A true identity conversion - Inventory Setup in, Inventory Setup out,
+    // no style change - has a richer source of truth than the recomputed
+    // semantic form: the original "setup" object itself, which carries
+    // details (item quantities, highlight color, and any "afi" entries
+    // that don't survive a flat-layout decode, e.g. one also sitting in an
+    // occupied inv/eq slot) that a from-scratch rebuild would otherwise
+    // lose or reset to defaults. Passing it through unchanged keeps a
+    // no-op conversion truly lossless.
+    if (inputStyle === outputStyle && origSetup) {
+      const setup = { ...origSetup, sb: normalizeSpellbook(sb) };
+      // "rp" is always a fixed 4-slot array (a divine rune pouch's
+      // capacity) elsewhere in the app - normalize a short/missing one
+      // here too, rather than passing through an under-length array just
+      // because that's what happened to be in the source data.
+      const rp = (Array.isArray(setup.rp) ? setup.rp : []).slice(0, RUNE_POUCH_SIZE);
+      while (rp.length < RUNE_POUCH_SIZE) rp.push(null);
+      setup.rp = rp;
+      return JSON.stringify({ setup: applyFuzzyFlags(setup), layout: rawLayout }, null, 0);
+    }
+
+    const outLayout = semanticToLayout(semantic, outputStyle, inputStyle);
     const setup = semanticToInventorySetup(semantic, name, sb);
+    // Even when a style change means the semantic form has to be rebuilt
+    // from scratch, an "afi" entry from the original Inventory Setup
+    // input can be real data the flat-layout decode alone can't recover -
+    // e.g. one that's also sitting in an occupied inv/eq slot, and so
+    // wouldn't otherwise be read as AFI at all. Merge those in on top of
+    // the recomputed set rather than dropping them. The one exception is
+    // an id that the recompute already placed in the quiver slot: that's
+    // the same kind of stale duplicate, but re-adding it as AFI here
+    // would be wrong rather than merely redundant, since the recomputed
+    // quiver slot is the trusted, corrected reading of that same data.
+    if (origSetup && origSetup.afi && typeof origSetup.afi === "object") {
+      const mergedAfi = { ...setup.afi };
+      for (const [id, entry] of Object.entries(origSetup.afi)) {
+        if (Number(id) === semantic.qv) continue;
+        mergedAfi[id] = withFuzzyFlag(entry);
+      }
+      setup.afi = mergedAfi;
+    }
     return JSON.stringify({ setup, layout: outLayout }, null, 0);
   } else if (outputType === "banklayout") {
+    const outLayout = semanticToLayout(semantic, outputStyle, inputStyle);
     return layoutToBankTagString(outLayout, name, banktag);
   }
   throw new Error("Unknown output type.");
