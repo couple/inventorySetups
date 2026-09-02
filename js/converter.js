@@ -242,7 +242,29 @@ function isRunePouchContainer(id) {
 // fuzzy-matches these with an "f" flag on the item entry so that any
 // variant/charge state of the pouch satisfies the setup, rather than
 // requiring the exact one on record.
-const FUZZY_MATCH_ITEM_IDS = new Set([27281, 27510, 27509, 27282]);
+const FUZZY_MATCH_ITEM_IDS = new Set([27281, 27510, 27509, 27282, // runepouch
+  // 12002, 14004, 19720, // occult
+  13652, 28039, // claws
+  25736, 25739, 22325, // CHARGED scythe
+  // 25731, 22323, // CHARGED sang
+  8842, 24182, 26467, 27002, // void gloves
+  27004, 26471, 24180, 13073, // void robe
+  27003, 26469, 24178, 13072, // void top
+  27006, 26475, 11664, 24184, // void range
+  27005, 26473, 11663, 24183, // void mage
+  26219, 27246, // fang
+  21003, 27100, // maul
+  // 25926, 25928, 25930, 25932, 25934, 25936, // gwd hilt
+  29801, 29804, // rancour
+  33335, 28338, // sra
+  27253, 27254, 27251, // ward, 25985 (no (f))
+  // 21776, 24232, 24238, 21780, 24233, 24246, 21784, 24234, 24242, 21791, 23607, 24236, 24248, 29617, 21793, 23603, 24240, 24249, 29615, 21795, 23605, 24244, 24250, 29613, // god capes
+  27550, 27551, 27552, 27553, // ca avernics
+  // 28830, 28902, 28906, 33532, 33533, // max quiver
+  // 21284, 21285, 21289, 24133, 33496, 33498, // infernal max
+  // 11864, 11865, 19639, 19641, 19643, 19645, 19647, 19649, 21264, 21266, 21888, 21890, 23073, 23075, 24370, 24444, 25177, 25179, 25181, 25183, 25185, 25187, 25189, 25191, 25898, 25900, 25902, 25904, 25906, 25908, 25910, 25912, 25914, 26674, 26675, 26676, 26677, 26678, 26679, 26680, 26681, 26682, 26683, 26684, 29816, 29818, 29820, 29822, 33066, 33068, 33070, 33072, 33338, 33340, 33439, 33441, 33443, 33445, 33447, 33449 // slayer helms
+  11802, 20368, 11804, 20370, 11806, 20372, 11808, 20374, 18344, // godsword (or)
+]);
 
 // Adds the plugin's "f": true fuzzy-match flag to an item entry when its id
 // is one of FUZZY_MATCH_ITEM_IDS - otherwise returns the entry unchanged.

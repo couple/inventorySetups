@@ -52,6 +52,26 @@ a:hover {
   height: 100vh;
   position: sticky;
   top: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) var(--panel);
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 10px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: var(--panel);
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 6px;
+  border: 2px solid var(--panel);
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--accent-dim);
 }
 
 #top-nav {
