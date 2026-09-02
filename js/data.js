@@ -42,6 +42,10 @@ const FAQ = [
 // Newest first. Shown on the home page.
 const CHANGELOG = [
   {
+    date: "2026-09-02",
+    text: "Added boss and spellbook icons.",
+  },
+  {
     date: "2026-09-01",
     text: "Fixes to the converter.\nAdded setups for: TOA leech, Doom alternative, Artio AFK blood barrage, Kree'arra solo, PNM and Vorkath resupply alts, Nex trio, Cerberus solo, Araaxor solo and 1+1, KBD 1+X, Colosseum and KQ 1+1.",
   },
@@ -110,6 +114,62 @@ const BOSS_ALIASES = {
   Arceuus -> 3
 */
 
+const SPELLBOOKS = {
+  0: { name: "Standard", file: "Standard_spellbook.png" },
+  1: { name: "Ancient", file: "Ancient_spellbook.png" },
+  2: { name: "Lunar", file: "Lunar_spellbook.png" },
+  3: { name: "Arceuus", file: "Arceuus_spellbook.png" },
+};
+
+// Maps a boss's `name` (as used in BOSSES below) to its associated pet, for
+// display on the boss page. Filenames are the exact OSRS Wiki image file for
+// that pet (see https://oldschool.runescape.wiki/w/Pet) - not run through the
+// generic item-icon resolver, since several pets have variant-tagged wiki
+// pages (e.g. "Noon#Noon") that resolver can't cleanly turn into a filename.
+// A boss with no single associated pet (e.g. multiple kings/brothers sharing
+// a group entry) is simply left out here.
+const BOSS_PETS = {
+  "King Black Dragon": { name: "Prince Black Dragon", file: "Prince_Black_Dragon.png" },
+  "Kalphite Queen": { name: "Kalphite Princess", file: "Kalphite_Princess.png" },
+  "Sarachnis": { name: "Sraracha", file: "Sraracha.png" },
+  "Phosani's Nightmare": { name: "Little Nightmare", file: "Little_Nightmare.png" },
+  "Scurrius": { name: "Scurry", file: "Scurry.png" },
+  "The Hueycoatl": { name: "Huberte", file: "Huberte.png" },
+  "Royal Titans": { name: "Bran", file: "Bran.png" },
+  "Yama": { name: "Yami", file: "Yami.png" },
+  "Kree'arra": { name: "Pet Kree'arra", file: "Pet_Kree%27arra.png" },
+  "General Graardor": { name: "Pet General Graardor", file: "Pet_General_Graardor.png" },
+  "K'ril Tsutsaroth": { name: "Pet K'ril Tsutsaroth", file: "Pet_K%27ril_Tsutsaroth.png" },
+  "Commander Zilyana": { name: "Pet Zilyana", file: "Pet_Zilyana.png" },
+  "Nex": { name: "Nexling", file: "Nexling.png" },
+  "Thermonuclear Smoke Devil": { name: "Pet Smoke Devil", file: "Pet_Smoke_Devil.png" },
+  "Kraken": { name: "Pet Kraken", file: "Pet_Kraken.png" },
+  "Cerberus": { name: "Hellpuppy", file: "Hellpuppy.png" },
+  "Abyssal Sire": { name: "Abyssal orphan", file: "Abyssal_orphan.png" },
+  "Grotesque Guardians": { name: "Noon", file: "Noon.png" },
+  "Alchemical Hydra": { name: "Ikkle Hydra", file: "Ikkle_Hydra_%28serpentine%29.png" },
+  "Araxxor": { name: "Nid", file: "Nid.png" },
+  "Shellbane Gryphon": { name: "Gull", file: "Gull_%28pet%29.png" },
+  "Vorkath": { name: "Vorki", file: "Vorki.png" },
+  "Phantom Muspah": { name: "Muphin", file: "Muphin_%28ranged%29.png" },
+  "The Whisperer": { name: "Wisp", file: "Wisp.png" },
+  "Vardorvis": { name: "Butch", file: "Butch.png" },
+  "Duke Sucellus": { name: "Baron", file: "Baron.png" },
+  "The Leviathan": { name: "Lil'viathan", file: "Lil%27viathan.png" },
+  "Amoxliatl": { name: "Moxi", file: "Moxi.png" },
+  "Mad Angel": { name: "Aggy", file: "Aggy.png" },
+  "Spindel": { name: "Venenatis spiderling", file: "Venenatis_spiderling.png" },
+  "Artio": { name: "Callisto cub", file: "Callisto_cub.png" },
+  "Calvar'ion": { name: "Vet'ion Jr.", file: "Vet%27ion_Jr..png" },
+  "Scorpia": { name: "Scorpia's offspring", file: "Scorpia%27s_offspring.png" },
+  "Zulrah": { name: "Pet Snakeling", file: "Pet_Snakeling.png" },
+  "Doom of Mokhaiotl": { name: "Dom", file: "Dom.png" },
+  "Maggot King": { name: "Maggot marquess", file: "Maggot_marquess.png" },
+  "Fortis Colosseum": { name: "Smol Heredit", file: "Smol_Heredit.png" },
+  "Tombs of Amascut": { name: "Tumeken's guardian", file: "Tumeken%27s_guardian.png" },
+  "Dagannoth Kings": { name: "Dagannoth Prime Jr.", file: "Dagannoth_Prime_Jr..png" },
+  "Barrows Brothers": { name: "Barrows teleport", file: "Barrows_teleport_%28tablet%29.png" },
+};
 
 const BOSSES = [
   // -------- Group --------

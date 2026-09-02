@@ -309,7 +309,30 @@ function renderSetup(setup, headingTag) {
 
   const heading = document.createElement(headingTag);
   heading.className = "setup-heading";
-  heading.textContent = setup.label;
+
+  const titleEl = document.createElement("div");
+  titleEl.className = "setup-title";
+  titleEl.textContent = setup.label;
+  heading.appendChild(titleEl);
+
+  const spellbook = SPELLBOOKS[setup.sb];
+  if (spellbook) {
+    const sbRow = document.createElement("div");
+    sbRow.className = "setup-spellbook";
+
+    const sbIcon = document.createElement("img");
+    sbIcon.className = "spellbook-icon";
+    sbIcon.src = `${WIKI}/images/${spellbook.file}`;
+    sbIcon.alt = "";
+    sbIcon.loading = "lazy";
+    sbRow.appendChild(sbIcon);
+
+    const sbName = document.createElement("span");
+    sbName.textContent = spellbook.name;
+    sbRow.appendChild(sbName);
+
+    heading.appendChild(sbRow);
+  }
 
   const content = document.createElement("div");
   content.className = "setup-content";
@@ -412,9 +435,25 @@ function renderBossPage(boss, modeParam) {
   const main = document.getElementById("main");
   main.innerHTML = "";
 
+  const header = document.createElement("div");
+  header.className = "boss-header";
+
+  const pet = BOSS_PETS[boss.name];
+  if (pet) {
+    const petImg = document.createElement("img");
+    petImg.className = "boss-pet-icon";
+    petImg.src = `${WIKI}/images/${pet.file}`;
+    petImg.alt = `${pet.name} pet`;
+    petImg.title = pet.name;
+    petImg.loading = "lazy";
+    header.appendChild(petImg);
+  }
+
   const h1 = document.createElement("h1");
   h1.textContent = boss.name;
-  main.appendChild(h1);
+  header.appendChild(h1);
+
+  main.appendChild(header);
 
   const bossNotes = renderNotesToggle(boss.notes, "boss-notes");
   if (bossNotes) main.appendChild(bossNotes);
@@ -797,8 +836,28 @@ function buildSidebar() {
       const a = document.createElement("a");
       a.className = "boss-link";
       a.href = `#${slug}`;
-      a.textContent = boss.name;
       a.dataset.slug = slug;
+
+      const pet = BOSS_PETS[boss.name];
+      if (pet) {
+        const petImg = document.createElement("img");
+        petImg.className = "sidebar-pet-icon";
+        petImg.src = `${WIKI}/images/${pet.file}`;
+        petImg.alt = "";
+        petImg.title = pet.name;
+        petImg.loading = "lazy";
+        a.appendChild(petImg);
+      } else {
+        const spacer = document.createElement("span");
+        spacer.className = "sidebar-pet-icon sidebar-pet-icon-empty";
+        a.appendChild(spacer);
+      }
+
+      const label = document.createElement("span");
+      label.className = "boss-link-label";
+      label.textContent = boss.name;
+      a.appendChild(label);
+
       nav.appendChild(a);
     });
   });
