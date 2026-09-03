@@ -264,7 +264,6 @@ a:hover {
 .main {
   flex: 1;
   padding: 40px 48px;
-  max-width: 1800px;
 }
 
 .main h1 {
@@ -412,17 +411,25 @@ a:hover {
   display: block;
 }
 
-.setup-row {
-  display: grid;
-  grid-auto-flow: column;
-  grid-template-rows: auto auto auto auto;
-  grid-template-columns: repeat(3, 402px);
+.setup-row-wrapper {
+  display: flex;
+  flex-wrap: wrap;
   column-gap: 32px;
-  row-gap: 6px;
-  align-items: start;
-  width: max-content;
+  row-gap: 28px;
+  margin: 0 0 28px;
+  /* Safety net: if the viewport is narrower than a single 402px card
+     (the gear grid's icons can't shrink further), scroll instead of
+     overflowing the page. */
   overflow-x: auto;
-  margin-bottom: 28px;
+}
+
+.setup-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 402px;
+  flex: 0 0 auto;
+  min-width: 0;
 }
 
 .setup-heading {

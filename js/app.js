@@ -58,7 +58,7 @@ function resolveItem(id) {
   let cleanPage = page.replace(/#/g, '');
 
   // Remove specific suffixes
-  cleanPage = cleanPage.replace(/[_]?full$|[_]?locked$|[_]?charged$|[_]?inventory$|[_]?normal$|[_]?assembled$|[_]?filled$|[_]?closed|[_]?open$|[_]?uncharged$|[_]?active$|[_]?used$|[_]?new$/i, '');
+  cleanPage = cleanPage.replace(/[_]?nightmare_zone$|[_]?full$|[_]?locked$|[_]?charged$|[_]?inventory$|[_]?normal$|[_]?assembled$|[_]?filled$|[_]?closed|[_]?open$|[_]?uncharged$|[_]?active$|[_]?used$|[_]?new$/i, '');
   cleanPage = cleanPage.replace(/trimmed/gi, '(t)');
 
   // Capitalize the first letter
@@ -281,6 +281,62 @@ function renderGrid(layout) {
 
 // -------- Notes (always-visible, used per-setup and per-mode) --------
 
+// A bare URL token, e.g. "https://discord.com/channels/...".
+const NOTES_URL_RE = /^https?:\/\/\S+$/;
+
+// Renders one line of notes text into `container`, turning any number of
+// "label - url" pairs chained with " - " into clickable links, e.g.
+//   "Trio - https://a.com - 5s - https://b.com"
+// becomes two separate links, "Trio" and "5s", joined by " - ". Segments
+// with no adjoining URL (or lines with no links at all) are left as plain
+// text, so this is a no-op for ordinary notes.
+function appendNotesLine(container, line) {
+  const tokens = line.split(/ - /);
+  let first = true;
+
+  for (let i = 0; i < tokens.length; i++) {
+    if (!first) container.appendChild(document.createTextNode(" - "));
+    first = false;
+
+    const token = tokens[i];
+    const next = tokens[i + 1];
+
+    if (next && NOTES_URL_RE.test(next)) {
+      // "label - url" pair: label becomes the link text.
+      const a = document.createElement("a");
+      a.href = next;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.textContent = token;
+      container.appendChild(a);
+      i++; // consume the url token too
+    } else if (NOTES_URL_RE.test(token)) {
+      // Bare url with no preceding label.
+      const a = document.createElement("a");
+      a.href = token;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.textContent = token;
+      container.appendChild(a);
+    } else {
+      container.appendChild(document.createTextNode(token));
+    }
+  }
+}
+
+// Appends full notes text to a container, line by line. Newlines are kept
+// as plain text nodes since .notes-content uses white-space: pre-wrap to
+// render them as line breaks.
+function appendNotesText(container, text) {
+  const lines = text.split("\n");
+  lines.forEach((line, i) => {
+    appendNotesLine(container, line);
+    if (i < lines.length - 1) {
+      container.appendChild(document.createTextNode("\n"));
+    }
+  });
+}
+
 function renderNotesToggle(text, extraClass) {
   if (!text || !text.trim()) return null;
   const wrap = document.createElement("div");
@@ -290,7 +346,7 @@ function renderNotesToggle(text, extraClass) {
   label.textContent = "Notes";
   const content = document.createElement("div");
   content.className = "notes-content";
-  content.textContent = text;
+  appendNotesText(content, text);
   wrap.appendChild(label);
   wrap.appendChild(content);
   return wrap;
@@ -298,14 +354,15 @@ function renderNotesToggle(text, extraClass) {
 
 // -------- Single setup block (heading + grid + copy button + updated date) --------
 
-// Renders one setup as 4 separate grid cells (heading, content, button,
-// meta) rather than one wrapping element. renderSetupRow places these
-// directly into a shared CSS Grid (grid-auto-flow: column) so that each
-// row of content - the heading, the gear grid, the copy button, and the
-// updated/notes block - lines up across every column in the row, no
-// matter how tall an individual setup's grid or notes are.
+// Renders one setup as a single self-contained card (heading, gear grid,
+// copy button, updated/notes block stacked vertically). Cards are laid out
+// by renderSetupRow in a wrapping flex row, so the browser decides how many
+// fit per line based on available width instead of a fixed column count.
 function renderSetup(setup, headingTag) {
   const style = getGridStyle();
+
+  const card = document.createElement("div");
+  card.className = "setup-card";
 
   const heading = document.createElement(headingTag);
   heading.className = "setup-heading";
@@ -333,6 +390,7 @@ function renderSetup(setup, headingTag) {
 
     heading.appendChild(sbRow);
   }
+  card.appendChild(heading);
 
   const content = document.createElement("div");
   content.className = "setup-content";
@@ -346,29 +404,20 @@ function renderSetup(setup, headingTag) {
   }
 
   const grid = renderGrid(layout);
-  const meta = document.createElement("div");
-  meta.className = "setup-meta";
-  const buttonCell = document.createElement("div");
-  buttonCell.className = "setup-button-cell";
 
   if (!grid) {
     const p = document.createElement("p");
     p.className = "no-setup";
     p.textContent = "No setup data added yet.";
     content.appendChild(p);
-    return [heading, content, buttonCell, meta];
+    card.appendChild(content);
+    return card;
   }
   content.appendChild(grid);
+  card.appendChild(content);
 
-  if (setup.updated) {
-    const updated = document.createElement("div");
-    updated.className = "updated-date";
-    updated.textContent = `Updated as of ${formatDate(setup.updated)}`;
-    meta.appendChild(updated);
-  }
-
-  const notesEl = renderNotesToggle(setup.notes);
-  if (notesEl) meta.appendChild(notesEl);
+  const buttonCell = document.createElement("div");
+  buttonCell.className = "setup-button-cell";
 
   const format = getCopyFormat();
   let copyText = null;
@@ -397,26 +446,46 @@ function renderSetup(setup, headingTag) {
     });
   }
   buttonCell.appendChild(btn);
+  card.appendChild(buttonCell);
 
-  return [heading, content, buttonCell, meta];
+  const meta = document.createElement("div");
+  meta.className = "setup-meta";
+
+  if (setup.updated) {
+    const updated = document.createElement("div");
+    updated.className = "updated-date";
+    updated.textContent = `Updated as of ${formatDate(setup.updated)}`;
+    meta.appendChild(updated);
+  }
+
+  const notesEl = renderNotesToggle(setup.notes);
+  if (notesEl) meta.appendChild(notesEl);
+
+  card.appendChild(meta);
+
+  return card;
 }
 
+// Setups are laid out in a wrapping flex row (see .setup-row-wrapper),
+// capped at 3 cards wide via max-width. The browser handles how many fit
+// per line based on available width, wrapping the rest onto new lines.
 function renderSetupRow(setups, headingTag) {
-  const row = document.createElement("div");
-  row.className = "setup-row";
+  const wrapper = document.createElement("div");
+  wrapper.className = "setup-row-wrapper";
+
   if (!setups || setups.length === 0) {
     const p = document.createElement("p");
     p.className = "no-setup";
     p.textContent = "No setup data added yet.";
-    row.appendChild(p);
-    return row;
+    wrapper.appendChild(p);
+    return wrapper;
   }
-  row.style.gridTemplateColumns = `repeat(${setups.length}, 402px)`;
+
   setups.forEach((s) => {
-    const cells = renderSetup(s, headingTag);
-    cells.forEach((cell) => row.appendChild(cell));
+    wrapper.appendChild(renderSetup(s, headingTag));
   });
-  return row;
+
+  return wrapper;
 }
 
 // -------- Boss page --------
@@ -429,6 +498,51 @@ function setBossHash(boss, label) {
   if (window.location.hash !== newHash) {
     history.replaceState(null, "", newHash);
   }
+}
+
+// Returns a boss's setup groups as a normalized list of
+// { key, label, notes, setups }, in display order.
+//
+// Preferred: define `boss.modes` directly for any number of groups:
+//   modes: [
+//     { key: "trio", label: "Trio", notes: "...", setups: [...] },
+//     { key: "5s",   label: "5s",   setups: [...] },
+//     { key: "8s",   label: "8s",   setups: [...] },
+//   ]
+//
+// Legacy: bosses without `modes` fall back to the old top-level
+// solo/duo/soloLabel/duoLabel/soloNotes/duoNotes fields, so none of the
+// existing data needs to change.
+function getBossModes(boss) {
+  if (Array.isArray(boss.modes) && boss.modes.length > 0) {
+    return boss.modes
+      .filter((m) => Array.isArray(m.setups) && m.setups.length > 0)
+      .map((m) => ({
+        key: m.key,
+        label: m.label || m.key,
+        notes: m.notes || null,
+        setups: m.setups,
+      }));
+  }
+
+  const modes = [];
+  if (Array.isArray(boss.solo) && boss.solo.length > 0) {
+    modes.push({
+      key: "solo",
+      label: boss.soloLabel || "Solo",
+      notes: boss.soloNotes || null,
+      setups: boss.solo,
+    });
+  }
+  if (Array.isArray(boss.duo) && boss.duo.length > 0) {
+    modes.push({
+      key: "duo",
+      label: boss.duoLabel || "1+1",
+      notes: boss.duoNotes || null,
+      setups: boss.duo,
+    });
+  }
+  return modes;
 }
 
 function renderBossPage(boss, modeParam) {
@@ -458,98 +572,83 @@ function renderBossPage(boss, modeParam) {
   const bossNotes = renderNotesToggle(boss.notes, "boss-notes");
   if (bossNotes) main.appendChild(bossNotes);
 
-  const hasSolo = Array.isArray(boss.solo) && boss.solo.length > 0;
-  const hasDuo = Array.isArray(boss.duo) && boss.duo.length > 0;
+  const modes = getBossModes(boss);
 
-  if (hasSolo && hasDuo) {
-    // Show toggle + both
-    const toggle = document.createElement("div");
-    toggle.className = "mode-toggle";
+  if (modes.length === 0) {
+    const p = document.createElement("p");
+    p.className = "no-setup";
+    p.textContent = "No setup data added yet.";
+    main.appendChild(p);
+    return;
+  }
 
-    const soloLabel = boss.soloLabel || "Solo";
-    const duoLabel = boss.duoLabel || "1+1";
+  if (modes.length === 1) {
+    const mode = modes[0];
+    const block = document.createElement("div");
+    block.className = "setup-block is-visible";
+    block.dataset.mode = mode.key;
+    const modeNotes = renderNotesToggle(mode.notes, "mode-notes");
+    if (modeNotes) block.appendChild(modeNotes);
+    block.appendChild(renderSetupRow(mode.setups, "h2"));
+    main.appendChild(block);
+    return;
+  }
 
-    const soloBtn = document.createElement("button");
-    soloBtn.type = "button";
-    soloBtn.className = "mode-btn";
-    soloBtn.dataset.mode = "solo";
-    soloBtn.textContent = soloLabel;
+  // Multiple modes: show a toggle button per mode, with only the active
+  // block visible at a time.
+  const toggle = document.createElement("div");
+  toggle.className = "mode-toggle";
 
-    const duoBtn = document.createElement("button");
-    duoBtn.type = "button";
-    duoBtn.className = "mode-btn";
-    duoBtn.dataset.mode = "duo";
-    duoBtn.textContent = duoLabel;
+  const buttons = [];
+  const blocks = [];
 
-    toggle.appendChild(soloBtn);
-    toggle.appendChild(duoBtn);
-    main.appendChild(toggle);
+  modes.forEach((mode) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "mode-btn";
+    btn.dataset.mode = mode.key;
+    btn.textContent = mode.label;
+    toggle.appendChild(btn);
+    buttons.push(btn);
 
-    const soloBlock = document.createElement("div");
-    soloBlock.className = "setup-block";
-    soloBlock.dataset.mode = "solo";
-    const soloModeNotes = renderNotesToggle(boss.soloNotes, "mode-notes");
-    if (soloModeNotes) soloBlock.appendChild(soloModeNotes);
-    soloBlock.appendChild(renderSetupRow(boss.solo, "h2"));
+    const block = document.createElement("div");
+    block.className = "setup-block";
+    block.dataset.mode = mode.key;
+    const modeNotes = renderNotesToggle(mode.notes, "mode-notes");
+    if (modeNotes) block.appendChild(modeNotes);
+    block.appendChild(renderSetupRow(mode.setups, "h2"));
+    blocks.push(block);
+  });
 
-    const duoBlock = document.createElement("div");
-    duoBlock.className = "setup-block";
-    duoBlock.dataset.mode = "duo";
-    const duoModeNotes = renderNotesToggle(boss.duoNotes, "mode-notes");
-    if (duoModeNotes) duoBlock.appendChild(duoModeNotes);
-    duoBlock.appendChild(renderSetupRow(boss.duo, "h2"));
+  main.appendChild(toggle);
+  blocks.forEach((b) => main.appendChild(b));
 
-    main.appendChild(soloBlock);
-    main.appendChild(duoBlock);
+  const applyMode = (key) => {
+    buttons.forEach((b) => b.classList.toggle("is-active", b.dataset.mode === key));
+    blocks.forEach((b) => b.classList.toggle("is-visible", b.dataset.mode === key));
+    const mode = modes.find((m) => m.key === key);
+    setBossHash(boss, mode.label);
+  };
 
-    const applyMode = (mode) => {
-      [soloBtn, duoBtn].forEach((b) => b.classList.toggle("is-active", b.dataset.mode === mode));
-      [soloBlock, duoBlock].forEach((b) => b.classList.toggle("is-visible", b.dataset.mode === mode));
-      setBossHash(boss, mode === "duo" ? duoLabel : soloLabel);
-    };
-
-    soloBtn.addEventListener("click", () => {
-      localStorage.setItem("bossMode", "solo");
-      applyMode("solo");
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      localStorage.setItem("bossMode", btn.dataset.mode);
+      applyMode(btn.dataset.mode);
     });
-    duoBtn.addEventListener("click", () => {
-      localStorage.setItem("bossMode", "duo");
-      applyMode("duo");
-    });
+  });
 
-    // URL wins if it names a valid, available mode (e.g. shared/bookmarked
-    // link); otherwise fall back to whatever the user used last time.
-    const savedMode = localStorage.getItem("bossMode");
-    if ((modeParam === "solo" && hasSolo) || (modeParam === "duo" && hasDuo)) {
-      applyMode(modeParam);
-    } else if (savedMode === "duo" && hasDuo) {
-      applyMode("duo");
-    } else {
-      applyMode("solo");
-    }
+  // URL wins if it names a valid, available mode (e.g. shared/bookmarked
+  // link); otherwise fall back to whatever the user used last time; then
+  // the boss's first defined mode.
+  const availableKeys = modes.map((m) => m.key);
+  const savedMode = localStorage.getItem("bossMode");
+
+  if (modeParam && availableKeys.includes(modeParam)) {
+    applyMode(modeParam);
+  } else if (savedMode && availableKeys.includes(savedMode)) {
+    applyMode(savedMode);
   } else {
-    if (hasSolo) {
-      const soloBlock = document.createElement("div");
-      soloBlock.className = "setup-block is-visible";
-      soloBlock.dataset.mode = "solo";
-      const soloModeNotes = renderNotesToggle(boss.soloNotes, "mode-notes");
-      if (soloModeNotes) soloBlock.appendChild(soloModeNotes);
-      soloBlock.appendChild(renderSetupRow(boss.solo, "h2"));
-      main.appendChild(soloBlock);
-    } else if (hasDuo) {
-      const duoBlock = document.createElement("div");
-      duoBlock.className = "setup-block is-visible";
-      duoBlock.dataset.mode = "duo";
-      const duoModeNotes = renderNotesToggle(boss.duoNotes, "mode-notes");
-      if (duoModeNotes) duoBlock.appendChild(duoModeNotes);
-      duoBlock.appendChild(renderSetupRow(boss.duo, "h2"));
-      main.appendChild(duoBlock);
-    } else {
-      const p = document.createElement("p");
-      p.className = "no-setup";
-      p.textContent = "No setup data added yet.";
-      main.appendChild(p);
-    }
+    applyMode(modes[0].key);
   }
 }
 
@@ -1020,10 +1119,10 @@ function route() {
 
   let modeParam;
   if (modeLabelSlug) {
-    const soloLabelSlug = labelToUrlSegment(boss.soloLabel || "Solo");
-    const duoLabelSlug = labelToUrlSegment(boss.duoLabel || "1+1");
-    if (modeLabelSlug === soloLabelSlug) modeParam = "solo";
-    else if (modeLabelSlug === duoLabelSlug) modeParam = "duo";
+    const match = getBossModes(boss).find(
+      (m) => labelToUrlSegment(m.label) === modeLabelSlug
+    );
+    if (match) modeParam = match.key;
   }
 
   renderBossPage(boss, modeParam);

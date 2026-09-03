@@ -3,10 +3,12 @@
 ## Setups to add
 - Thermy 1+1
 - Commander Zilyana 1+1
-- Toa main
+- Solo toa / main/keris toa 8s
 - Maggot king 1+1
 - Chaos ele
 - KQ solo
+- Solo / trio cm
+- HMT
 
 ## Missing Bank Tag Icons
 - N/A
@@ -25,8 +27,7 @@
 - Fix "lazy" solution for "f":true removal in test file
 
 ## Feature ideas
-- Raid setups for each scale / role
 - Inventory setups -> bank tag layout - define icon (use boss pet ids, banktag:name,id)
 - Changelog in a contained scroll box
-- Remove side scroll
 - Contact / link to repo
+- Link slug capitalisation
