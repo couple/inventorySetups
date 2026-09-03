@@ -3,12 +3,10 @@
 ## Setups to add
 - Thermy 1+1
 - Commander Zilyana 1+1
-- Solo toa / main/keris toa 8s
 - Maggot king 1+1
+- Toa main / keris
 - Chaos ele
 - KQ solo
-- Solo / trio cm
-- HMT
 
 ## Missing Bank Tag Icons
 - N/A
@@ -22,6 +20,7 @@
 - Sire solo
 - Cerb solo
 - Element amulet
+- Solo CM / TOA
 
 ## Code bugs
 - Fix "lazy" solution for "f":true removal in test file
