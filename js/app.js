@@ -1339,8 +1339,8 @@ function buildPreferencesTestSetup() {
   const entries = ids.map((id, i) => (id === null ? null : `${id}:${i}`)).filter((e) => e !== null);
   const bankIds = ids.filter((id) => id !== null);
   const raw =
-    `banktaglayoutsplugin:Preferences test,${entries.join(",")},` +
-    `banktag:Preferences test,${bankIds.join(",")}${bankIds.length ? "," + bankIds[0] : ""}`;
+    `banktaglayoutsplugin:preferences test,${entries.join(",")},` +
+    `banktag:preferences test,${bankIds.join(",")}${bankIds.length ? "," + bankIds[0] : ""}`;
   return { label: "Preferences test", raw, prefGroup: "test" };
 }
 
@@ -1605,7 +1605,7 @@ function renderPreferences() {
   const intro = document.createElement("p");
   intro.className = "preferences-intro";
   intro.textContent =
-    "Choose your desired variants for the items below and these preferences will be changed for all setups on the site.\nPlease note some setups are protected, for example certain GWD bosses require specific MA2 capes.";
+    "Choose your desired variants for the items below and these preferences will be changed for all setups on the site.\nPlease note that some setups are protected, for example certain GWD bosses require specific MA2 capes.";
   main.appendChild(intro);
 
   const choices = getItemPreferenceChoices();
@@ -1660,7 +1660,7 @@ function renderPreferences() {
     const altNote = document.createElement("p");
     altNote.className = "preferences-intro";
     altNote.textContent =
-      "These only apply to setups flagged with prefGroup: \"alt\" in data.js (e.g. Kalphite Queen's \"DPS Alt\") - everywhere else ignores them.";
+      "These only apply to setups intended for alt accounts.";
     main.appendChild(altNote);
 
     const altGrid = document.createElement("div");
@@ -1679,7 +1679,7 @@ function renderPreferences() {
 
   const testNote = document.createElement("p");
   testNote.className = "preferences-intro";
-  testNote.textContent = "Every preference's item in one setup, so you can check your choices show and copy correctly.";
+  testNote.textContent = "Every preference in one setup, so you can check your choices show and copy correctly.";
   main.appendChild(testNote);
 
   const testSetup = buildPreferencesTestSetup();

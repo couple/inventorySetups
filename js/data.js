@@ -32,7 +32,11 @@ const FAQ = [
   },
   {
     q: "",
-    a: "Copy the setup with the button under the setup image.",
+    a: "You can enter a name for the setup or leave it blank to use the default.",
+  },
+  {
+    q: "",
+    a: "Finally, copy the setup data with the button under the setup name box and import it.",
   },
   {
     q: "",

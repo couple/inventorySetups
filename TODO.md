@@ -39,3 +39,4 @@
 - Link slug capitalisation
 - More notes / guides for bosses
 - Wiki button remove underline
+- Reset to default button popup header/img
