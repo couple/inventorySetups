@@ -54,11 +54,11 @@ items = dict(sorted(numeric_items.items(), key=lambda x: int(x[0])))
 if "33595" in items:
     items["33596"] = items["33595"]
 if "28906" in items:
-    items["28903"] = items["28906"]
+    items["28903"] = items["28906"] # Dizana's max cape#Locked
 if "27253" in items:
-    items["27254"] = items["27253"]
+    items["27254"] = items["27253"] # Elidinis' ward (or) 
 if "27281" in items:
-    items["27510"] = items["27281"]
+    items["27510"] = items["27281"] # Divine rune pouch#Normal 
 if "9075" in items:
     items["16687"] = items["9075"]
 if "21389" in items:
@@ -66,13 +66,13 @@ if "21389" in items:
 if "31106" in items:
     items["31108"] = items["31106"]
 if "11806" in items:
-    items["18344"] = items["11806"]
+    items["18344"] = items["11806"] # Saradomin godsword 
 if "27241" in items:
     items["27243"] = items["27241"]
 if "563" in items:
     items["13708"] = items["563"]
 if "11920" in items:
-    items["14766"] = items["11920"]
+    items["14766"] = items["11920"] # Dragon pickaxe 
 if "28316" in items:
     items["28318"] = items["28316"]
 if "22978" in items:
@@ -110,9 +110,9 @@ if "24425" in items:
 if "27238" in items:
     items["27240"] = items["27238"]
 if "12926" in items:
-    items["15315"] = items["12926"]
+    items["15315"] = items["12926"] # Toxic blowpipe#Charged 
 if "12002" in items:
-    items["14004"] = items["12002"]
+    items["14004"] = items["12002"] # Occult necklace 
 if "20997" in items:
     items["20999"] = items["20997"]
 if "22326" in items:

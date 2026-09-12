@@ -242,28 +242,29 @@ function isRunePouchContainer(id) {
 // fuzzy-matches these with an "f" flag on the item entry so that any
 // variant/charge state of the pouch satisfies the setup, rather than
 // requiring the exact one on record.
-const FUZZY_MATCH_ITEM_IDS = new Set([27281, 27510, 27509, 27282, // runepouch
-  // 12002, 14004, 19720, // occult
-  13652, 28039, // claws
-  25736, 25739, 22325, // CHARGED scythe
-  // 25731, 22323, // CHARGED sang
-  8842, 24182, 26467, 27002, // void gloves
-  27004, 26471, 24180, 13073, // void robe
-  27003, 26469, 24178, 13072, // void top
-  27006, 26475, 11664, 24184, // void range
-  27005, 26473, 11663, 24183, // void mage
-  26219, 27246, // fang
-  21003, 27100, // maul
-  // 25926, 25928, 25930, 25932, 25934, 25936, // gwd hilt
-  29801, 29804, // rancour
-  33335, 28338, // sra
-  27253, 27254, 27251, // ward, 25985 (no (f))
-  // 21776, 24232, 24238, 21780, 24233, 24246, 21784, 24234, 24242, 21791, 23607, 24236, 24248, 29617, 21793, 23603, 24240, 24249, 29615, 21795, 23605, 24244, 24250, 29613, // god capes
-  27550, 27551, 27552, 27553, // ca avernics
-  // 28830, 28902, 28906, 33532, 33533, // max quiver
-  // 21284, 21285, 21289, 24133, 33496, 33498, // infernal max
-  // 11864, 11865, 19639, 19641, 19643, 19645, 19647, 19649, 21264, 21266, 21888, 21890, 23073, 23075, 24370, 24444, 25177, 25179, 25181, 25183, 25185, 25187, 25189, 25191, 25898, 25900, 25902, 25904, 25906, 25908, 25910, 25912, 25914, 26674, 26675, 26676, 26677, 26678, 26679, 26680, 26681, 26682, 26683, 26684, 29816, 29818, 29820, 29822, 33066, 33068, 33070, 33072, 33338, 33340, 33439, 33441, 33443, 33445, 33447, 33449 // slayer helms
-  11802, 20368, 11804, 20370, 11806, 20372, 11808, 20374, 18344, // godsword (or)
+const FUZZY_MATCH_ITEM_IDS = new Set([
+  // 27281, 27510, 27509, 27282, // runepouch
+  // // 12002, 14004, 19720, // occult
+  // 13652, 28039, // claws
+  // 25736, 25739, 22325, // CHARGED scythe
+  // // 25731, 22323, // CHARGED sang
+  // 8842, 24182, 26467, 27002, // void gloves
+  // 27004, 26471, 24180, 13073, // void robe
+  // 27003, 26469, 24178, 13072, // void top
+  // 27006, 26475, 11664, 24184, // void range
+  // 27005, 26473, 11663, 24183, // void mage
+  // 26219, 27246, // fang
+  // 21003, 27100, // maul
+  // // 25926, 25928, 25930, 25932, 25934, 25936, // gwd hilt
+  // 29801, 29804, // rancour
+  // 33335, 28338, // sra
+  // 27253, 27254, 27251, // ward, 25985 (no (f))
+  // // 21776, 24232, 24238, 21780, 24233, 24246, 21784, 24234, 24242, 21791, 23607, 24236, 24248, 29617, 21793, 23603, 24240, 24249, 29615, 21795, 23605, 24244, 24250, 29613, // god capes
+  // 27550, 27551, 27552, 27553, // ca avernics
+  // // 28830, 28902, 28906, 33532, 33533, // max quiver
+  // // 21284, 21285, 21289, 24133, 33496, 33498, // infernal max
+  // // 11864, 11865, 19639, 19641, 19643, 19645, 19647, 19649, 21264, 21266, 21888, 21890, 23073, 23075, 24370, 24444, 25177, 25179, 25181, 25183, 25185, 25187, 25189, 25191, 25898, 25900, 25902, 25904, 25906, 25908, 25910, 25912, 25914, 26674, 26675, 26676, 26677, 26678, 26679, 26680, 26681, 26682, 26683, 26684, 29816, 29818, 29820, 29822, 33066, 33068, 33070, 33072, 33338, 33340, 33439, 33441, 33443, 33445, 33447, 33449 // slayer helms
+  // 11802, 20368, 11804, 20370, 11806, 20372, 11808, 20374, 18344, // godsword (or)
 ]);
 
 // Adds the plugin's "f": true fuzzy-match flag to an item entry when its id
@@ -783,26 +784,146 @@ function getSetupLayout(setup, style) {
   return semanticToLayout(base.semantic, style, "default");
 }
 
+// ---- Item id substitution ----
+// Remaps item ids throughout a semantic setup description according to
+// `substitutions` (a plain object of "default item id" -> "chosen
+// replacement item id"). Powers the Preferences page: swapping, say, a
+// base Infernal cape for the max cape wherever it appears in a setup.
+function substituteSemanticIds(semantic, substitutions) {
+  const sub = (id) => (id !== -1 && id !== undefined && substitutions[id] !== undefined ? substitutions[id] : id);
+  return {
+    inv: semantic.inv.map(sub),
+    eq: semantic.eq.map(sub),
+    rp: semantic.rp.map(sub),
+    qv: sub(semantic.qv),
+    afi: (semantic.afi || []).map((entry) => ({ ...entry, id: sub(entry.id) })),
+    rpRaw: (semantic.rpRaw || []).map((entry) => ({ ...entry, id: sub(entry.id) })),
+  };
+}
+
+// Applies the same id substitutions to a flat layout[] array (positions
+// used for grid rendering). Entries of -1 (empty) are left untouched.
+function substituteLayoutIds(layout, substitutions) {
+  if (!layout) return layout;
+  return layout.map((id) => (id !== -1 && id !== undefined && substitutions[id] !== undefined ? substitutions[id] : id));
+}
+
+// A Bank Tag Layout's trailing "banktag:name,id,id,...,firstId" section is
+// a second, independent list of item ids (what the Bank Tags plugin itself
+// matches on) - separate from the grid layout above, so it needs its own
+// id substitution pass to stay in sync with it.
+//
+// A "-123" entry is the Bank Tags plugin's own "fuzzy match" marker
+// (accept a related/similar item too, e.g. a different charge state) -
+// since a preference has already picked one exact id, there's nothing
+// left to be fuzzy about, so these are dropped entirely rather than
+// substituted (there's no sensible substitution for a negative id anyway
+// - it'd just silently fail to match the substitution map's positive
+// keys and stay as stale, wrong, unsubstituted noise).
+//
+// A substitution result of -1 (see a preference's `requires`, in
+// getItemSubstitutionMap) means "this item no longer applies at all" -
+// e.g. a companion item that's only relevant alongside one specific
+// choice - so those are dropped from the list too, rather than the
+// meaningless literal id "-1" ending up in the tag.
+function substituteIdsInBanktagString(banktagStr, substitutions) {
+  if (!banktagStr) return banktagStr;
+  const trimmed = banktagStr.trim();
+  if (!trimmed.startsWith("banktag:")) return banktagStr;
+  const rest = trimmed.slice("banktag:".length);
+  const parts = rest.split(",");
+  const name = parts.shift();
+  const newParts = parts
+    .filter((part) => !part.trim().startsWith("-"))
+    .map((part) => {
+      const id = Number(part);
+      return Number.isInteger(id) && substitutions[id] !== undefined ? substitutions[id] : part;
+    })
+    .filter((part) => part !== -1)
+    .map(String);
+  return `banktag:${name}${newParts.length ? "," + newParts.join(",") : ""}`;
+}
+
+// ---- Renaming helpers ----
+// Swap out just the "name" field of an already-built raw setup string,
+// leaving everything else (item ids, positions, bank tag contents, extra
+// JSON fields) byte-for-byte the same. Used so a user-supplied custom name
+// can be applied without falling back to a from-scratch reconstruction.
+function renameBankTagLayoutString(raw, newName) {
+  const { layout, banktag } = parseBankTagLayout(raw);
+  return layoutToBankTagString(layout, newName, banktag);
+}
+
+function renameInventorySetupString(raw, newName) {
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch (e) {
+    return raw;
+  }
+  if (!data || Array.isArray(data) || !data.setup || typeof data.setup !== "object") return raw;
+  data.setup.name = newName;
+  return JSON.stringify(data, null, 0);
+}
+
+// Returns the default name a setup would be copied under (the name already
+// embedded in its data), or null if the setup has no usable data.
+function getSetupDefaultName(setup) {
+  const base = getSetupSemantic(setup);
+  return base ? base.name : null;
+}
+
 // Returns the text to put on the clipboard for the current site-wide
 // format and grid style, converting on the fly from "raw"/"inventory" for
 // anything the setup doesn't explicitly provide (default Inventory Setup
 // JSON, zigzag Bank Tag Layout, zigzag Inventory Setup JSON).
-function getSetupCopyText(setup, format, style) {
-  if (style === "zigzag") {
-    if (format === "inventory" && setup.zigzagInventory) return setup.zigzagInventory.trim();
-    if (format !== "inventory" && setup.zigzagRaw) return setup.zigzagRaw.trim();
-  } else {
-    if (format === "inventory" && setup.inventory) return setup.inventory.trim();
-    if (format !== "inventory" && setup.raw) return setup.raw.trim();
+//
+// `customName`, if a non-empty string, overrides the name that would
+// otherwise be embedded in the copied text.
+//
+// `itemSubstitutions`, if given a non-empty "default item id" -> "chosen
+// item id" map (see the Preferences page / substituteSemanticIds above),
+// swaps those items in throughout the copied output. Whenever any
+// substitution is active, the raw-string passthrough below is skipped in
+// favor of a from-scratch rebuild off the semantic form, the same way a
+// custom name already forces one - there's no substring-safe way to swap
+// an id inside an already-built raw string.
+function getSetupCopyText(setup, format, style, customName, itemSubstitutions) {
+  const name = typeof customName === "string" && customName.trim() ? customName.trim() : null;
+  const hasSubstitutions = itemSubstitutions && Object.keys(itemSubstitutions).length > 0;
+
+  if (!hasSubstitutions) {
+    if (style === "zigzag") {
+      if (format === "inventory" && setup.zigzagInventory) {
+        const trimmed = setup.zigzagInventory.trim();
+        return name ? renameInventorySetupString(trimmed, name) : trimmed;
+      }
+      if (format !== "inventory" && setup.zigzagRaw) {
+        const trimmed = setup.zigzagRaw.trim();
+        return name ? renameBankTagLayoutString(trimmed, name) : trimmed;
+      }
+    } else {
+      if (format === "inventory" && setup.inventory) {
+        const trimmed = setup.inventory.trim();
+        return name ? renameInventorySetupString(trimmed, name) : trimmed;
+      }
+      if (format !== "inventory" && setup.raw) {
+        const trimmed = setup.raw.trim();
+        return name ? renameBankTagLayoutString(trimmed, name) : trimmed;
+      }
+    }
   }
 
   const base = getSetupSemantic(setup);
   if (!base) return null;
-  const layout = semanticToLayout(base.semantic, style, "default");
+  const semantic = hasSubstitutions ? substituteSemanticIds(base.semantic, itemSubstitutions) : base.semantic;
+  const layout = semanticToLayout(semantic, style, "default");
+  const finalName = name || base.name;
+  const banktag = hasSubstitutions ? substituteIdsInBanktagString(base.banktag, itemSubstitutions) : base.banktag;
 
   if (format === "inventory") {
-    const inventorySetup = semanticToInventorySetup(base.semantic, base.name, base.sb);
+    const inventorySetup = semanticToInventorySetup(semantic, finalName, base.sb);
     return JSON.stringify({ setup: inventorySetup, layout }, null, 0);
   }
-  return layoutToBankTagString(layout, base.name, base.banktag);
+  return layoutToBankTagString(layout, finalName, banktag);
 }

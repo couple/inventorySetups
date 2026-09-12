@@ -47,6 +47,293 @@ function setGridStyle(style) {
   route(); // re-render current page so grids reflect the new layout style
 }
 
+// -------- Item preferences (ornament kit swaps, etc.) --------
+// Backs the Preferences page. Lets the user swap a "default" item - every
+// place it appears, in any setup on the site - for a variant of their
+// choosing. Applies to both the icon shown on the site and the item id in
+// whatever gets copied. Choices are stored per-browser (localStorage).
+//
+// Each ITEM_PREFERENCES entry is either:
+//   type: "item" - a single swappable item, shown as one dropdown.
+//   type: "set"  - a group of armour pieces (e.g. void, blorva), each
+//                  swappable on its own, plus optional named presets
+//                  (`sets`) that set every piece at once.
+//
+// A set's pieces are stored under `"${pref.key}:${piece.key}"` so keys
+// stay unique across the whole page; getFlatPreferenceEntries() below is
+// what turns both shapes into one flat list for substitution/testing.
+
+function getItemPreferenceChoices() {
+  try {
+    const stored = JSON.parse(localStorage.getItem("itemPreferences") || "{}");
+    return stored && typeof stored === "object" ? stored : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+// Applies one or more [storageKey, itemIdOrNull] choices in a single
+// write, then re-renders once. Use this (rather than several calls to
+// setItemPreferenceChoice) when applying a whole-set preset, so picking
+// a preset doesn't re-render once per piece.
+function setItemPreferenceChoices(pairs) {
+  const choices = getItemPreferenceChoices();
+  pairs.forEach(([key, itemId]) => {
+    if (itemId === null || itemId === undefined) {
+      delete choices[key];
+    } else {
+      choices[key] = itemId;
+    }
+  });
+  localStorage.setItem("itemPreferences", JSON.stringify(choices));
+  route(); // re-render current page so any visible icons/copy text update
+}
+
+function setItemPreferenceChoice(key, itemId) {
+  setItemPreferenceChoices([[key, itemId]]);
+}
+
+// A `variants` entry is either a plain item id, or `{ id, name, icon }` to
+// override the display text and/or the icon shown (e.g. for an ugly
+// auto-generated wiki name, or a wiki page whose image doesn't match).
+// These three helpers are the only places that need to know that.
+function getVariantId(variant) {
+  return typeof variant === "object" && variant !== null ? variant.id : variant;
+}
+function getVariantIds(variants) {
+  return (variants || []).map(getVariantId);
+}
+function getVariantLabel(variant) {
+  if (typeof variant === "object" && variant !== null && variant.name) return variant.name;
+  const id = getVariantId(variant);
+  let entry = null;
+  try {
+    entry = resolveItem(id);
+  } catch (e) {
+    entry = null;
+  }
+  return entry ? entry.name : `Item ${id}`;
+}
+// `variant.icon`, if given, is either a full URL or just a wiki image
+// filename (e.g. "Dragon_pickaxe.png") which gets resolved against the
+// wiki's image path the same way resolveItem does. Returns null when
+// there's no override, meaning "use the id's normal icon".
+function getVariantIcon(variant) {
+  if (typeof variant !== "object" || variant === null || !variant.icon) return null;
+  return variant.icon.indexOf("http") === 0 ? variant.icon : `${WIKI}/images/${variant.icon}`;
+}
+// Finds the variants-list entry (plain id or `{id,...}`) matching a given
+// item id, so its `icon`/`name` overrides can be looked up for whichever
+// variant is currently selected.
+function findVariant(variants, id) {
+  return (variants || []).find((v) => getVariantId(v) === id);
+}
+
+// The default item id for a preference or set piece: an explicit
+// `default` field if given, otherwise the first entry in `variants`. Lets
+// most entries stay as just a plain variants list while still allowing a
+// specific one (not necessarily the first you typed) to be marked default.
+function getPreferenceDefault(prefOrPiece) {
+  if (prefOrPiece.default !== undefined) return prefOrPiece.default;
+  const ids = getVariantIds(prefOrPiece.variants);
+  return ids.length > 0 ? ids[0] : undefined;
+}
+
+// Flattens ITEM_PREFERENCES into one list of { storageKey, label, variants,
+// default, groups, aliases } entries - one per single item, and one per
+// set piece - so substitution and the test setup don't need to know about
+// "item" vs "set" shapes. `variants` here is always a plain id list (name
+// overrides are only needed when rendering the dropdowns themselves).
+// `groups` is `pref.groups` if set (e.g. `["main", "alt"]` to affect
+// both), otherwise just `["main"]`. `aliases` is `pref.aliases` if set, or
+// `[]` - see getItemSubstitutionMap below for what it does. `requires` is
+// `pref.requires` if set, or `{}` - also see getItemSubstitutionMap. A set
+// piece always inherits its parent set's `groups`, but can have its own
+// `aliases`/`requires` (they don't make sense shared across pieces).
+function getFlatPreferenceEntries() {
+  const entries = [];
+  ITEM_PREFERENCES.forEach((pref) => {
+    const groups = pref.groups || ["main"];
+    if (pref.type === "set") {
+      (pref.pieces || []).forEach((piece) => {
+        entries.push({
+          storageKey: `${pref.key}:${piece.key}`,
+          label: `${pref.label} - ${piece.label}`,
+          variants: getVariantIds(piece.variants),
+          default: piece.default,
+          aliases: piece.aliases || [],
+          requires: piece.requires || {},
+          groups,
+        });
+      });
+    } else {
+      entries.push({
+        storageKey: pref.key,
+        label: pref.label,
+        variants: getVariantIds(pref.variants),
+        default: pref.default,
+        aliases: pref.aliases || [],
+        requires: pref.requires || {},
+        groups,
+      });
+    }
+  });
+  return entries;
+}
+
+// Map of "item id" -> "what it should be replaced with" for one preference
+// group ("main", used by every setup by default, or "alt", used only by
+// setups a boss's data.js entry explicitly opts in - see
+// getSubstitutionMapForSetup below). An entry counts toward a group if
+// that group is anywhere in its `groups` list, so an entry listed under
+// both (e.g. `groups: ["main", "alt"]`) contributes to both maps from the
+// SAME stored choice - setting it from either section updates both places
+// at once, rather than tracking two independent values.
+//
+// Three kinds of entries in the map:
+//   - `variant -> effective` for every id in an entry's `variants` list
+//     (including the default) - "effective" being the chosen variant, or
+//     the default if nothing's been chosen. This is what lets a setup
+//     that already has some OTHER (non-default) variant hardcoded in its
+//     raw string still respond to changing the preference - not just
+//     setups that happen to use the exact default id.
+//   - `alias -> effective`, the same way, for every id in an entry's
+//     `aliases` - ids that aren't offered as a pickable variant but
+//     should still always be normalized (e.g. `27253` for the `ward`
+//     preference, when a setup happens to store the ward ornament kit
+//     under that id instead of any of ward's own variant ids).
+//   - `companion -> -1` for every id in an entry's `requires` map whose
+//     required id ISN'T the current effective choice - a companion item
+//     that only makes sense alongside one specific variant (e.g. id
+//     28328 alongside Ring of shadows, 28327, for `teleportalt`), removed
+//     entirely (via the special id -1, meaning "empty"/"not present" -
+//     the same convention layouts already use for an empty slot) whenever
+//     something else is chosen instead. If the required id IS the
+//     effective choice, no entry is added for it at all - it's left as
+//     whatever the setup already has, since it's valid as-is.
+// Either way, nothing is added to the map for an id that's already equal
+// to `effective` (a no-op swap).
+//
+// Layered on top of MANUAL_ITEM_SUBSTITUTIONS (see data.js), which always
+// applies regardless of group or preference - use that instead of
+// `aliases`/`requires` for a one-off id swap that has nothing to do with
+// any preference's choice.
+function getItemSubstitutionMap(group) {
+  const targetGroup = group || "main";
+  const map = Object.assign({}, MANUAL_ITEM_SUBSTITUTIONS);
+  const choices = getItemPreferenceChoices();
+  getFlatPreferenceEntries().forEach((entry) => {
+    if (!entry.groups.includes(targetGroup)) return;
+    if (!entry.variants || entry.variants.length === 0) return;
+    const defaultId = getPreferenceDefault(entry);
+    const chosen = choices[entry.storageKey];
+    const hasChosen = chosen !== undefined && chosen !== defaultId && entry.variants.includes(chosen);
+    const effective = hasChosen ? chosen : defaultId;
+
+    entry.variants.forEach((variantId) => {
+      if (variantId !== effective) map[variantId] = effective;
+    });
+    entry.aliases.forEach((aliasId) => {
+      if (aliasId !== effective) map[aliasId] = effective;
+    });
+    Object.keys(entry.requires).forEach((companionIdStr) => {
+      const companionId = Number(companionIdStr);
+      const requiredId = entry.requires[companionIdStr];
+      if (effective !== requiredId) map[companionId] = -1;
+    });
+  });
+  return map;
+}
+
+// The effective item id for one flattened preference entry: the chosen
+// variant if the user picked one (and it's still a valid option), else the
+// entry's default. This looks the choice up by the entry's own
+// `storageKey`, so it stays correct even when two entries happen to share
+// default/variant ids (e.g. `capesmain:mage` and `capesalt:mage`) - unlike
+// a flat id -> id substitution map, which can't tell those two apart once
+// their ids collide.
+function getEntryEffectiveId(entry) {
+  const choices = getItemPreferenceChoices();
+  const defaultId = getPreferenceDefault(entry);
+  const chosen = choices[entry.storageKey];
+  return chosen !== undefined && chosen !== defaultId && entry.variants.includes(chosen) ? chosen : defaultId;
+}
+
+// Which substitution map a given boss setup should use. Every setup gets
+// "main" (the Sets/Items sections) unless its data.js entry sets
+// `prefGroup: "alt"`, in which case it gets the "Alt" section's
+// substitutions instead - an alt-flagged setup ignores "main"-only
+// entries entirely (entries listed under both groups still apply, since
+// they're in the "alt" map too).
+//
+// The Preferences page's own test setup uses `prefGroup: "test"` and gets
+// no substitution map at all ({}) - buildPreferencesTestSetup already
+// bakes each item's correct effective id (via getEntryEffectiveId, above)
+// directly into the setup it builds, entry by entry, rather than relying
+// on a single merged id -> id map the way every other setup does. A
+// merged main+alt map can't represent "this occurrence of id X should
+// become main's choice, but that other occurrence of the same id X should
+// become alt's choice" when a main and an alt entry happen to share ids -
+// which capesmain/capesalt and other main/alt pairs deliberately do.
+//
+// Finally, `setup.itemOverrides` (if present) constrains specific
+// preferences to a setup-specific choice - see applyItemOverrides below.
+function getSubstitutionMapForSetup(setup) {
+  let map;
+  if (setup && setup.prefGroup === "alt") map = getItemSubstitutionMap("alt");
+  else if (setup && setup.prefGroup === "test") map = {};
+  else map = getItemSubstitutionMap("main");
+  return applyItemOverrides(map, setup);
+}
+
+// Applies `setup.itemOverrides` on top of an already-computed substitution
+// map, constraining specific preferences to a choice appropriate for that
+// one setup - e.g. K'ril's setups should only ever show a Zamorak mage
+// cape, whichever god the `capesmain:mage` preference is actually set to
+// site-wide.
+//
+// Shape, per overridden preference:
+//   itemOverrides: {
+//     "capesmain:mage": {
+//       groups: [
+//         { match: [21791, 24248, 21793, 24249, 21795, 24250], use: 21795 },
+//         { match: [21776, 24232, 21784, 24234, 21780, 24233], use: 21780 },
+//       ],
+//     },
+//   }
+// For each overridden storageKey: find which `groups` entry's `match`
+// list contains the preference's current site-wide EFFECTIVE id (see
+// getEntryEffectiveId - the chosen variant, or the default), and force
+// every id that preference could otherwise produce (its own variants and
+// aliases) to that group's `use` id instead. If the effective id doesn't
+// fall into any listed group, the override does nothing for it (falls
+// back to whatever the normal substitution map already has) - so a
+// `groups` list only needs to cover the categories that actually matter,
+// e.g. "which god" doesn't need enumerating, only "max vs not max".
+function applyItemOverrides(map, setup) {
+  if (!setup || !setup.itemOverrides) return map;
+  const result = Object.assign({}, map);
+  Object.keys(setup.itemOverrides).forEach((storageKey) => {
+    const entry = getFlatPreferenceEntries().find((e) => e.storageKey === storageKey);
+    if (!entry) return;
+    const effective = getEntryEffectiveId(entry);
+    const groups = setup.itemOverrides[storageKey].groups || [];
+    const matched = groups.find((g) => g.match.includes(effective));
+    if (!matched) return;
+    const useId = matched.use;
+    // For the id we're forcing TO, explicitly clear any entry the base
+    // map may have already set for it (e.g. from a differently-chosen
+    // site-wide preference normalizing every variant, including this one,
+    // to ITS effective id) - otherwise that stale rule would still fire
+    // and undo the override on the very id it's supposed to leave alone.
+    [...entry.variants, ...(entry.aliases || [])].forEach((id) => {
+      if (id === useId) delete result[id];
+      else result[id] = useId;
+    });
+  });
+  return result;
+}
+
 // -------- Item icon resolution --------
 
 function resolveItem(id) {
@@ -58,7 +345,7 @@ function resolveItem(id) {
   let cleanPage = page.replace(/#/g, '');
 
   // Remove specific suffixes
-  cleanPage = cleanPage.replace(/[_]?nightmare_zone$|[_]?full$|[_]?locked$|[_]?charged$|[_]?inventory$|[_]?normal$|[_]?assembled$|[_]?filled$|[_]?closed|[_]?open$|[_]?uncharged$|[_]?active$|[_]?used$|[_]?new$/i, '');
+  cleanPage = cleanPage.replace(/[_]?restored$|[_]?untrimmed$|[_]?worn$|[_]?nightmare_zone$|[_]?full$|[_]?locked$|[_]?charged$|[_]?inventory$|[_]?normal$|[_]?assembled$|[_]?filled$|[_]?closed|[_]?open$|[_]?uncharged$|[_]?active$|[_]?used$|[_]?new$/i, '');
   cleanPage = cleanPage.replace(/trimmed/gi, '(t)');
 
   // Capitalize the first letter
@@ -67,6 +354,42 @@ function resolveItem(id) {
   // Handle special cases
   if (capitalizedPage === "Seeking_dragon_arrow") {
     capitalizedPage = "Seeking_dragon_arrow_5";
+  }
+
+  if (capitalizedPage === "Dragon_dagger_(cr)(p++)") {
+    capitalizedPage = "Dragon_dagger_(p++)(cr)";
+  }
+
+  if (capitalizedPage === "Scythe_of_vitur") {
+    capitalizedPage = "Scythe_of_Vitur";
+  }
+
+  if (capitalizedPage === "Volatile_nightmare_staff") {
+    capitalizedPage = "Volatile_Nightmare_staff";
+  }
+
+  if (capitalizedPage === "Volatile_nightmare_staff_(deadman)") {
+    capitalizedPage = "Volatile_Nightmare_staff_(Deadman)";
+  }
+
+  if (capitalizedPage === "Voidwaker_(deadman)") {
+    capitalizedPage = "Voidwaker_(Deadman)";
+  }
+
+  if (capitalizedPage === "Armadyl_godsword_(deadman)") {
+    capitalizedPage = "Armadyl_godsword_(Deadman)";
+  }
+
+  if (capitalizedPage === "Imbued_guthix_cape") {
+    capitalizedPage = "Imbued_Guthix_cape";
+  } 
+
+  if (capitalizedPage === "Blessed_dizana's_quiver") {
+    capitalizedPage = "Blessed_Dizana's_quiver";
+  }
+
+  if (capitalizedPage === "Dizana's_quiverlocked_+") {
+    capitalizedPage = "Dizana's_quiver";
   }
 
   if (capitalizedPage === "Ruby_dragon_bolts_(e)") {
@@ -224,6 +547,10 @@ function resolveItem(id) {
 
   if (capitalizedPage === "Purple_sweets") {
     capitalizedPage = "Purple_sweets_100";
+  }  
+
+  if (capitalizedPage === "3rd_age_pickaxe") {
+    capitalizedPage = "3rd_Age_pickaxe";
   }  
 
   return {
@@ -395,9 +722,11 @@ function renderSetup(setup, headingTag) {
   const content = document.createElement("div");
   content.className = "setup-content";
 
+  const substitutions = getSubstitutionMapForSetup(setup);
+
   let layout = null;
   try {
-    layout = getSetupLayout(setup, style);
+    layout = substituteLayoutIds(getSetupLayout(setup, style), substitutions);
   } catch (e) {
     console.error("Failed to load setup layout:", setup.label, e);
     layout = null;
@@ -422,10 +751,25 @@ function renderSetup(setup, headingTag) {
   const format = getCopyFormat();
   let copyText = null;
   try {
-    copyText = getSetupCopyText(setup, format, style);
+    copyText = getSetupCopyText(setup, format, style, null, substitutions);
   } catch (e) {
     copyText = null;
   }
+
+  // Lets the user override the name embedded in the copied setup (defaults
+  // to whatever name the setup would otherwise be copied under).
+  let defaultName = null;
+  try {
+    defaultName = getSetupDefaultName(setup);
+  } catch (e) {
+    defaultName = null;
+  }
+  const nameInput = document.createElement("input");
+  nameInput.type = "text";
+  nameInput.className = "setup-name-input";
+  nameInput.placeholder = defaultName || setup.label || "Setup name";
+  nameInput.setAttribute("aria-label", `Custom name for ${setup.label || "this setup"}`);
+  if (copyText) buttonCell.appendChild(nameInput);
 
   const usingZigzag =
     style === "zigzag" && (setup.zigzagRaw || setup.zigzagInventory || setup.raw || setup.inventory);
@@ -438,7 +782,13 @@ function renderSetup(setup, headingTag) {
     btn.title = "Couldn't produce this format for this setup.";
   } else {
     btn.addEventListener("click", () => {
-      navigator.clipboard.writeText(copyText.trim()).then(() => {
+      let text = copyText;
+      try {
+        text = getSetupCopyText(setup, format, style, nameInput.value, getSubstitutionMapForSetup(setup)) || copyText;
+      } catch (e) {
+        text = copyText;
+      }
+      navigator.clipboard.writeText(text.trim()).then(() => {
         const original = btn.textContent;
         btn.textContent = "Copied!";
         setTimeout(() => (btn.textContent = original), 1200);
@@ -488,7 +838,22 @@ function renderSetupRow(setups, headingTag) {
   return wrapper;
 }
 
+// -------- Boss wiki links --------
+
+// Returns the OSRS Wiki URL for a boss. Defaults to deriving it straight
+// from the boss's display name (spaces -> underscores, matching the
+// wiki's URL convention) - which covers the vast majority of bosses since
+// their in-game name and their wiki article title are the same. For the
+// rare boss whose wiki article lives under a different title, set an
+// explicit `wiki: "Page_title"` on that boss's entry in data.js and it
+// will be used instead - no other boss needs to be touched.
+function getBossWikiUrl(boss) {
+  const page = boss.wiki || boss.name;
+  return `${WIKI}/w/${page.trim().replace(/\s+/g, "_")}`;
+}
+
 // -------- Boss page --------
+
 
 // Updates the URL to `#slug/label` (using the boss's own Solo/1+1 style
 // labels) without triggering another hashchange, so switching setup type
@@ -566,6 +931,15 @@ function renderBossPage(boss, modeParam) {
   const h1 = document.createElement("h1");
   h1.textContent = boss.name;
   header.appendChild(h1);
+
+  const wikiLink = document.createElement("a");
+  wikiLink.className = "boss-wiki-link";
+  wikiLink.href = getBossWikiUrl(boss);
+  wikiLink.target = "_blank";
+  wikiLink.rel = "noopener";
+  wikiLink.title = "View on the OSRS Wiki";
+  wikiLink.textContent = "Wiki ↗";
+  header.appendChild(wikiLink);
 
   main.appendChild(header);
 
@@ -915,6 +1289,408 @@ function buildTopNav() {
   converterLink.textContent = "Setup Converter";
   converterLink.dataset.slug = "converter";
   top.appendChild(converterLink);
+
+  const preferencesLink = document.createElement("a");
+  preferencesLink.className = "boss-link nav-primary";
+  preferencesLink.href = "#preferences";
+  preferencesLink.textContent = "Preferences";
+  preferencesLink.dataset.slug = "preferences";
+  top.appendChild(preferencesLink);
+}
+
+// -------- Preferences page --------
+// Builds a single synthetic setup carrying every preference's/piece's
+// CURRENT effective item (see getEntryEffectiveId above - the chosen
+// variant if one's picked, otherwise the default), one per slot, computed
+// directly per entry rather than via the normal substitution-map path (see
+// getSubstitutionMapForSetup for why: main/alt pairs deliberately share
+// ids, which a merged map can't handle). This still doubles as a live
+// test of the real thing, though: any bug in how a choice gets resolved
+// would show up here exactly the same way it would on a real setup.
+//
+// Item order follows PREFERENCES_TEST_LAYOUT (see data.js) - list an
+// entry's identifier there (a plain preference's `key`, or a set piece's
+// "setKey:pieceKey") to pin its position; anything left out is appended
+// afterward in its normal ITEM_PREFERENCES order, so nothing is ever
+// silently dropped just for not being listed. A `null` entry in that list
+// leaves an empty gap at that position instead of placing an item, for
+// visually grouping things apart on the grid.
+function buildPreferencesTestSetup() {
+  const flat = getFlatPreferenceEntries().filter((entry) => entry.variants && entry.variants.length > 0);
+  const byKey = new Map(flat.map((entry) => [entry.storageKey, entry]));
+  const ordered = [];
+  (typeof PREFERENCES_TEST_LAYOUT !== "undefined" ? PREFERENCES_TEST_LAYOUT : []).forEach((storageKey) => {
+    if (storageKey === null) {
+      ordered.push(null); // explicit empty gap
+      return;
+    }
+    const entry = byKey.get(storageKey);
+    if (entry) {
+      ordered.push(entry);
+      byKey.delete(storageKey);
+    }
+  });
+  flat.forEach((entry) => {
+    if (byKey.has(entry.storageKey)) ordered.push(entry);
+  });
+
+  const ids = ordered.map((entry) => (entry === null ? null : getEntryEffectiveId(entry)));
+  if (ids.every((id) => id === null)) return { label: "Preferences test", raw: null };
+  const entries = ids.map((id, i) => (id === null ? null : `${id}:${i}`)).filter((e) => e !== null);
+  const bankIds = ids.filter((id) => id !== null);
+  const raw =
+    `banktaglayoutsplugin:Preferences test,${entries.join(",")},` +
+    `banktag:Preferences test,${bankIds.join(",")}${bankIds.length ? "," + bankIds[0] : ""}`;
+  return { label: "Preferences test", raw, prefGroup: "test" };
+}
+
+// Builds a <select> of `variants` (plain ids, or `{ id, name }` to
+// override the shown text), pre-selected to `selectedId`, that calls
+// `onChange(newId)` when the user picks something else. Shared by
+// single-item preferences and individual set pieces.
+function buildVariantSelect(variants, selectedId, onChange) {
+  const select = document.createElement("select");
+  select.className = "preference-select";
+  variants.forEach((variant) => {
+    const variantId = getVariantId(variant);
+    const opt = document.createElement("option");
+    opt.value = String(variantId);
+    opt.textContent = getVariantLabel(variant);
+    if (variantId === selectedId) opt.selected = true;
+    select.appendChild(opt);
+  });
+  select.addEventListener("change", () => onChange(Number(select.value)));
+  return select;
+}
+
+// Same icon-links-to-wiki pattern used by the setup grids (renderGrid).
+// `iconOverride`, if given (see getVariantIcon above), replaces the icon
+// src that would otherwise come from resolving `itemId` - the wiki link
+// and tooltip still reflect the actual item.
+function renderPreferenceIcon(itemId, iconOverride) {
+  let entry = null;
+  try {
+    entry = resolveItem(itemId);
+  } catch (e) {
+    entry = null;
+  }
+  if (!entry) {
+    const img = document.createElement("img");
+    img.src = iconOverride || "";
+    img.alt = "";
+    img.loading = "lazy";
+    return img;
+  }
+  const link = document.createElement("a");
+  link.href = entry.link;
+  link.title = entry.name;
+  link.target = "_blank";
+  link.rel = "noopener";
+  const img = document.createElement("img");
+  img.src = iconOverride || entry.icon;
+  img.alt = entry.name;
+  img.loading = "lazy";
+  link.appendChild(img);
+  return link;
+}
+
+// Renders a single-item preference: an icon plus one dropdown.
+function renderItemPreference(pref, choices) {
+  const block = document.createElement("div");
+  block.className = "preference-block";
+
+  const label = document.createElement("div");
+  label.className = "preference-label";
+  label.textContent = pref.label;
+  block.appendChild(label);
+
+  if (!pref.variants || pref.variants.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "preference-empty";
+    empty.textContent = "No item ids added yet - add them to this entry's `variants` list in data.js.";
+    block.appendChild(empty);
+    return block;
+  }
+
+  const defaultId = getPreferenceDefault(pref);
+  const selectedId = choices[pref.key] !== undefined ? choices[pref.key] : defaultId;
+
+  const row = document.createElement("div");
+  row.className = "preference-item-row";
+  row.appendChild(renderPreferenceIcon(selectedId, getVariantIcon(findVariant(pref.variants, selectedId))));
+  row.appendChild(
+    buildVariantSelect(pref.variants, selectedId, (newId) => {
+      setItemPreferenceChoice(pref.key, newId === defaultId ? null : newId);
+    })
+  );
+  block.appendChild(row);
+  return block;
+}
+
+// Renders a set preference: an optional whole-set dropdown (from
+// `pref.sets`), followed by each piece laid out with its own icon and
+// dropdown, matching how the pieces would sit together in a setup.
+// Named whole-set options for a set preference: `pref.sets` verbatim if
+// given, otherwise auto-derived when every piece that has variants lines
+// up the same way - piece.variants[i] across all pieces forms "tier i"
+// (e.g. torva/oathplate: each piece is just [regular, upgraded], so tier 0
+// = all-regular, tier 1 = all-upgraded). Lets a plain set of same-shaped
+// pieces get a whole-set toggle for free, without hand-writing `sets`.
+// `pref.setLabels`, if given, overrides the option text by position (e.g.
+// `["Regular", "Sanguine"]`) independently of each piece's own item name -
+// handy since the auto-derived label is just the first piece's item name,
+// which can be a mouthful. Set `pref.sets: false` to opt out of the toggle
+// entirely, even if the pieces would otherwise auto-derive one (e.g. for
+// sceptres, where each is a distinct item rather than a real "tier" pairing).
+// Returns [] if there's nothing sensible to offer (or the toggle was opted
+// out of).
+function getSetPresets(pref, pieces) {
+  if (pref.sets === false) return [];
+
+  let presets;
+  if (pref.sets && pref.sets.length > 0) {
+    presets = pref.sets;
+  } else {
+    const withVariants = pieces.filter((p) => p.variants && p.variants.length > 0);
+    if (withVariants.length === 0 || withVariants.length !== pieces.length) return [];
+    const tierCount = withVariants[0].variants.length;
+    if (tierCount < 2 || !withVariants.every((p) => p.variants.length === tierCount)) return [];
+
+    presets = [];
+    for (let i = 0; i < tierCount; i++) {
+      const items = {};
+      pieces.forEach((piece) => {
+        items[piece.key] = getVariantId(piece.variants[i]);
+      });
+      presets.push({ label: getVariantLabel(pieces[0].variants[i]), items });
+    }
+  }
+
+  if (pref.setLabels && pref.setLabels.length === presets.length) {
+    presets = presets.map((preset, i) => ({ ...preset, label: pref.setLabels[i] }));
+  }
+  return presets;
+}
+
+function renderSetPreference(pref, choices) {
+  const block = document.createElement("div");
+  block.className = "preference-block";
+
+  const labelRow = document.createElement("div");
+  labelRow.className = "preference-label-row";
+  const label = document.createElement("div");
+  label.className = "preference-label";
+  label.textContent = pref.label;
+  labelRow.appendChild(label);
+  block.appendChild(labelRow);
+
+  const pieces = pref.pieces || [];
+  if (pieces.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "preference-empty";
+    empty.textContent = "No pieces added yet - add them to this entry's `pieces` list in data.js.";
+    block.appendChild(empty);
+    return block;
+  }
+
+  // Whole-set dropdown, shown inline next to the title whenever there's at
+  // least one option to offer (an explicit `pref.sets`, or an auto-derived
+  // toggle - see getSetPresets above). A single option still renders as a
+  // two-way toggle ("Custom" vs that one option) - handy for things like
+  // "Infernal" that only make sense as on/off. Applies every listed piece
+  // at once; pre-selects whichever option matches what's currently chosen,
+  // or "Custom" if the pieces don't line up with any single one.
+  const presets = getSetPresets(pref, pieces);
+  if (presets.length > 0) {
+    const currentIndex = presets.findIndex((preset) =>
+      pieces.every((piece) => {
+        if (!(piece.key in preset.items)) return true; // this option doesn't touch this piece
+        const selected = choices[`${pref.key}:${piece.key}`] !== undefined
+          ? choices[`${pref.key}:${piece.key}`]
+          : getPreferenceDefault(piece);
+        return selected === preset.items[piece.key];
+      })
+    );
+
+    const setSelect = document.createElement("select");
+    setSelect.className = "preference-select";
+    setSelect.setAttribute("aria-label", `Whole set for ${pref.label}`);
+    const customOpt = document.createElement("option");
+    customOpt.value = "";
+    customOpt.textContent = "Custom";
+    if (currentIndex === -1) customOpt.selected = true;
+    setSelect.appendChild(customOpt);
+    presets.forEach((preset, i) => {
+      const opt = document.createElement("option");
+      opt.value = String(i);
+      opt.textContent = preset.label;
+      if (i === currentIndex) opt.selected = true;
+      setSelect.appendChild(opt);
+    });
+    setSelect.addEventListener("change", () => {
+      if (setSelect.value === "") return; // "Custom" is a display-only state
+      const preset = presets[Number(setSelect.value)];
+      const pairs = Object.entries(preset.items).map(([pieceKey, itemId]) => {
+        const piece = pieces.find((p) => p.key === pieceKey);
+        const defaultId = piece ? getPreferenceDefault(piece) : undefined;
+        return [`${pref.key}:${pieceKey}`, itemId === defaultId ? null : itemId];
+      });
+      setItemPreferenceChoices(pairs);
+    });
+    labelRow.appendChild(setSelect);
+  }
+
+  const piecesRow = document.createElement("div");
+  piecesRow.className = "preference-set-pieces";
+
+  pieces.forEach((piece) => {
+    const storageKey = `${pref.key}:${piece.key}`;
+    const pieceEl = document.createElement("div");
+    pieceEl.className = "preference-set-piece";
+
+    if (!piece.variants || piece.variants.length === 0) {
+      const icon = renderPreferenceIcon(undefined);
+      icon.title = piece.label;
+      pieceEl.appendChild(icon);
+      const empty = document.createElement("div");
+      empty.className = "preference-empty";
+      empty.textContent = "No item ids yet";
+      pieceEl.appendChild(empty);
+      piecesRow.appendChild(pieceEl);
+      return;
+    }
+
+    const defaultId = getPreferenceDefault(piece);
+    const selectedId = choices[storageKey] !== undefined ? choices[storageKey] : defaultId;
+
+    const icon = renderPreferenceIcon(selectedId, getVariantIcon(findVariant(piece.variants, selectedId)));
+    icon.title = piece.label;
+    pieceEl.appendChild(icon);
+    const select = buildVariantSelect(piece.variants, selectedId, (newId) => {
+      setItemPreferenceChoice(storageKey, newId === defaultId ? null : newId);
+    });
+    select.setAttribute("aria-label", piece.label);
+    pieceEl.appendChild(select);
+    piecesRow.appendChild(pieceEl);
+  });
+
+  block.appendChild(piecesRow);
+  return block;
+}
+
+function renderPreferences() {
+  const main = document.getElementById("main");
+  main.innerHTML = "";
+
+  const header = document.createElement("div");
+  header.className = "boss-header";
+  const h1 = document.createElement("h1");
+  h1.textContent = "Preferences";
+  header.appendChild(h1);
+
+  const resetBtn = document.createElement("button");
+  resetBtn.type = "button";
+  resetBtn.className = "preferences-reset-btn";
+  resetBtn.textContent = "Reset to defaults";
+  resetBtn.addEventListener("click", () => {
+    if (confirm("Reset ALL preferences back to their defaults? This can't be undone.")) {
+      localStorage.removeItem("itemPreferences");
+      route();
+    }
+  });
+  header.appendChild(resetBtn);
+
+  main.appendChild(header);
+
+  const intro = document.createElement("p");
+  intro.className = "preferences-intro";
+  intro.textContent =
+    "Choose your desired variants for the items below and these preferences will be changed for all setups on the site.\nPlease note some setups are protected, for example certain GWD bosses require specific MA2 capes.";
+  main.appendChild(intro);
+
+  const choices = getItemPreferenceChoices();
+
+  if (!ITEM_PREFERENCES || ITEM_PREFERENCES.length === 0) {
+    const p = document.createElement("p");
+    p.className = "no-setup";
+    p.textContent = "No preferences have been added yet.";
+    main.appendChild(p);
+    return;
+  }
+
+  // A preference's `groups` (defaulting to just ["main"]) decides which
+  // section(s) it renders in. Listing an entry under both means it shows
+  // - and is editable - in both places, backed by the same stored choice.
+  const inMain = (pref) => !pref.groups || pref.groups.includes("main");
+  const inAlt = (pref) => pref.groups && pref.groups.includes("alt");
+  const sets = ITEM_PREFERENCES.filter((pref) => pref.type === "set" && inMain(pref));
+  const items = ITEM_PREFERENCES.filter((pref) => pref.type !== "set" && inMain(pref));
+  const alt = ITEM_PREFERENCES.filter(inAlt);
+
+  if (sets.length > 0) {
+    const setsHeading = document.createElement("h2");
+    setsHeading.className = "section-heading";
+    setsHeading.textContent = "Sets";
+    main.appendChild(setsHeading);
+
+    const setsGrid = document.createElement("div");
+    setsGrid.className = "preferences-grid";
+    sets.forEach((pref) => setsGrid.appendChild(renderSetPreference(pref, choices)));
+    main.appendChild(setsGrid);
+  }
+
+  if (items.length > 0) {
+    const itemsHeading = document.createElement("h2");
+    itemsHeading.className = "section-heading";
+    itemsHeading.textContent = "Items";
+    main.appendChild(itemsHeading);
+
+    const itemsGrid = document.createElement("div");
+    itemsGrid.className = "preferences-grid";
+    items.forEach((pref) => itemsGrid.appendChild(renderItemPreference(pref, choices)));
+    main.appendChild(itemsGrid);
+  }
+
+  if (alt.length > 0) {
+    const altHeading = document.createElement("h2");
+    altHeading.className = "section-heading";
+    altHeading.textContent = "Alt";
+    main.appendChild(altHeading);
+
+    const altNote = document.createElement("p");
+    altNote.className = "preferences-intro";
+    altNote.textContent =
+      "These only apply to setups flagged with prefGroup: \"alt\" in data.js (e.g. Kalphite Queen's \"DPS Alt\") - everywhere else ignores them.";
+    main.appendChild(altNote);
+
+    const altGrid = document.createElement("div");
+    altGrid.className = "preferences-grid";
+    alt.forEach((pref) => {
+      const block = pref.type === "set" ? renderSetPreference(pref, choices) : renderItemPreference(pref, choices);
+      altGrid.appendChild(block);
+    });
+    main.appendChild(altGrid);
+  }
+
+  const testHeading = document.createElement("h2");
+  testHeading.className = "section-heading";
+  testHeading.textContent = "Test setup";
+  main.appendChild(testHeading);
+
+  const testNote = document.createElement("p");
+  testNote.className = "preferences-intro";
+  testNote.textContent = "Every preference's item in one setup, so you can check your choices show and copy correctly.";
+  main.appendChild(testNote);
+
+  const testSetup = buildPreferencesTestSetup();
+  if (testSetup.raw) {
+    main.appendChild(renderSetupRow([testSetup], "h3"));
+  } else {
+    const p = document.createElement("p");
+    p.className = "no-setup";
+    p.textContent = "Add item ids to at least one preference above to see a test setup here.";
+    main.appendChild(p);
+  }
 }
 
 function buildSidebar() {
@@ -1109,6 +1885,10 @@ function route() {
   }
   if (slug === "converter") {
     renderConverter();
+    return;
+  }
+  if (slug === "preferences") {
+    renderPreferences();
     return;
   }
   const boss = BOSSES.find((b) => slugify(b.name) === slug);

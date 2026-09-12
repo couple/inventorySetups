@@ -283,6 +283,40 @@ a:hover {
   margin: 0 0 12px 0;
 }
 
+.boss-wiki-link {
+  margin-bottom: 12px;
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-faint);
+  text-decoration: none;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.boss-wiki-link:hover {
+  color: var(--text);
+  border-color: var(--accent-dim);
+}
+
+.preferences-reset-btn {
+  margin-bottom: 12px;
+  padding: 3px 9px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-faint);
+  font-size: 12px;
+  font-family: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.preferences-reset-btn:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
 .boss-pet-icon {
   width: 28px;
   height: 28px;
@@ -523,6 +557,29 @@ a:hover {
   line-height: 1.1;
 }
 
+.setup-name-input {
+  display: block;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 6px 10px;
+  box-sizing: border-box;
+  background: #111214;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  outline: none;
+  font-family: inherit;
+  font-size: 12.5px;
+}
+
+.setup-name-input::placeholder {
+  color: var(--text-faint);
+}
+
+.setup-name-input:focus {
+  border-color: var(--accent-dim);
+}
+
 .copy-btn {
   display: block;
   width: 100%;
@@ -724,4 +781,107 @@ a:hover {
   .main {
     padding: 24px;
   }
+}
+/* -------- Preferences page -------- */
+
+.preferences-intro {
+  color: var(--text-dim);
+  margin: 0 0 24px 0;
+  white-space: pre-line;
+}
+
+.preferences-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  column-gap: 20px;
+  row-gap: 20px;
+  margin: 0 0 28px;
+  /* Safety net for very narrow viewports, matching .setup-row-wrapper. */
+  overflow-x: auto;
+}
+
+.preference-block {
+  flex: 0 0 auto;
+  width: 260px;
+  min-width: 0;
+  padding: 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.preference-label {
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+.preference-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.preference-label-row .preference-label {
+  margin-bottom: 0;
+}
+
+.preference-label-row .preference-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 60%;
+}
+
+.preference-empty {
+  color: var(--text-faint);
+  font-size: 13px;
+  font-style: italic;
+}
+
+.preference-select {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-family: inherit;
+  font-size: 13px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.preference-select:hover {
+  border-color: var(--accent-dim);
+}
+
+.preference-item-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.preference-item-row img,
+.preference-set-piece img {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+/* Pieces stacked on top of each other, like they sit in an actual gear
+   setup (helm, body, legs, ...) rather than laid out side by side. */
+.preference-set-pieces {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preference-set-piece {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
