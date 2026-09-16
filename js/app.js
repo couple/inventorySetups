@@ -345,7 +345,7 @@ function resolveItem(id) {
   let cleanPage = page.replace(/#/g, '');
 
   // Remove specific suffixes
-  cleanPage = cleanPage.replace(/[_]?restored$|[_]?untrimmed$|[_]?worn$|[_]?nightmare_zone$|[_]?full$|[_]?locked$|[_]?charged$|[_]?inventory$|[_]?normal$|[_]?assembled$|[_]?filled$|[_]?closed|[_]?open$|[_]?uncharged$|[_]?active$|[_]?used$|[_]?new$/i, '');
+  cleanPage = cleanPage.replace(/[_]?recoil$|[_]?restored$|[_]?untrimmed$|[_]?worn$|[_]?nightmare_zone$|[_]?full$|[_]?locked$|[_]?charged$|[_]?inventory$|[_]?normal$|[_]?assembled$|[_]?filled$|[_]?closed|[_]?open$|[_]?uncharged$|[_]?active$|[_]?used$|[_]?new$/i, '');
   cleanPage = cleanPage.replace(/trimmed/gi, '(t)');
 
   // Capitalize the first letter
@@ -512,13 +512,13 @@ function resolveItem(id) {
     capitalizedPage = "Imbued_Zamorak_cape";
   }
 
-  if (capitalizedPage === "Ring_of_suffering_(i)recoil") {
-    capitalizedPage = "Ring_of_suffering_(i)";
-  }
+  // if (capitalizedPage === "Ring_of_suffering_(i)recoil") {
+  //   capitalizedPage = "Ring_of_suffering_(i)";
+  // }
  
-  if (capitalizedPage === "Ring_of_sufferingrecoil") {
-    capitalizedPage = "Ring_of_suffering";
-  }
+  // if (capitalizedPage === "Ring_of_sufferingrecoil") {
+  //   capitalizedPage = "Ring_of_suffering";
+  // }
 
   if (capitalizedPage === "Book_of_darkness") {
     capitalizedPage = "Book_of_Darkness";
@@ -840,14 +840,18 @@ function renderSetupRow(setups, headingTag) {
 
 // -------- Boss wiki links --------
 
-// Returns the OSRS Wiki URL for a boss. Defaults to deriving it straight
-// from the boss's display name (spaces -> underscores, matching the
-// wiki's URL convention) - which covers the vast majority of bosses since
-// their in-game name and their wiki article title are the same. For the
-// rare boss whose wiki article lives under a different title, set an
-// explicit `wiki: "Page_title"` on that boss's entry in data.js and it
-// will be used instead - no other boss needs to be touched.
+// Returns the OSRS Wiki URL for a boss, or null if it shouldn't have a
+// wiki button at all. Defaults to deriving the URL straight from the
+// boss's display name (spaces -> underscores, matching the wiki's URL
+// convention) - which covers the vast majority of bosses since their
+// in-game name and their wiki article title are the same. For the rare
+// boss whose wiki article lives under a different title, set an explicit
+// `wiki: "Page_title"` on that boss's entry in data.js and it will be
+// used instead - no other boss needs to be touched. Set `wiki: null`
+// (not just leaving it unset) to skip the wiki button entirely, e.g. for
+// a boss with no real wiki page of its own.
 function getBossWikiUrl(boss) {
+  if (boss.wiki === null) return null;
   const page = boss.wiki || boss.name;
   return `${WIKI}/w/${page.trim().replace(/\s+/g, "_")}`;
 }
@@ -932,14 +936,17 @@ function renderBossPage(boss, modeParam) {
   h1.textContent = boss.name;
   header.appendChild(h1);
 
-  const wikiLink = document.createElement("a");
-  wikiLink.className = "boss-wiki-link";
-  wikiLink.href = getBossWikiUrl(boss);
-  wikiLink.target = "_blank";
-  wikiLink.rel = "noopener";
-  wikiLink.title = "View on the OSRS Wiki";
-  wikiLink.textContent = "Wiki ↗";
-  header.appendChild(wikiLink);
+  const wikiUrl = getBossWikiUrl(boss);
+  if (wikiUrl) {
+    const wikiLink = document.createElement("a");
+    wikiLink.className = "boss-wiki-link";
+    wikiLink.href = wikiUrl;
+    wikiLink.target = "_blank";
+    wikiLink.rel = "noopener";
+    wikiLink.title = "View on the OSRS Wiki";
+    wikiLink.textContent = "Wiki ↗";
+    header.appendChild(wikiLink);
+  }
 
   main.appendChild(header);
 
@@ -1578,6 +1585,89 @@ function renderSetPreference(pref, choices) {
   return block;
 }
 
+// -------- Custom confirm modal --------
+// Replaces the browser's native confirm() with an on-theme dialog (the
+// native one shows browser chrome, like the page's origin, above the
+// message - not something a page can restyle or remove). Calls
+// `onConfirm` only if the user clicks OK; Cancel, clicking outside the
+// dialog, or pressing Escape all just dismiss it with no callback.
+// `options.title`, if given, adds a heading with a warning icon above the
+// message - without it, the dialog is just the message and buttons.
+function showConfirmModal(message, onConfirm, options) {
+  const opts = options || {};
+
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+
+  const dialog = document.createElement("div");
+  dialog.className = "modal-dialog";
+
+  if (opts.title) {
+    const header = document.createElement("div");
+    header.className = "modal-header";
+    const icon = document.createElement("span");
+    icon.className = "modal-icon";
+    icon.textContent = "!";
+    header.appendChild(icon);
+    const titleEl = document.createElement("h3");
+    titleEl.className = "modal-title";
+    titleEl.textContent = opts.title;
+    header.appendChild(titleEl);
+    dialog.appendChild(header);
+  }
+
+  const text = document.createElement("p");
+  text.className = "modal-message";
+  text.textContent = message;
+  dialog.appendChild(text);
+
+  const actions = document.createElement("div");
+  actions.className = "modal-actions";
+
+  const close = () => {
+    overlay.remove();
+    document.removeEventListener("keydown", onKeydown);
+    document.body.style.overflow = previousOverflow;
+  };
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.className = "modal-btn modal-btn-cancel";
+  cancelBtn.textContent = "Cancel";
+  cancelBtn.addEventListener("click", close);
+
+  const okBtn = document.createElement("button");
+  okBtn.type = "button";
+  okBtn.className = "modal-btn modal-btn-confirm";
+  okBtn.textContent = "Reset";
+  okBtn.addEventListener("click", () => {
+    close();
+    onConfirm();
+  });
+
+  actions.appendChild(cancelBtn);
+  actions.appendChild(okBtn);
+  dialog.appendChild(actions);
+  overlay.appendChild(dialog);
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+  function onKeydown(e) {
+    if (e.key === "Escape") close();
+  }
+  document.addEventListener("keydown", onKeydown);
+
+  // Lock body scrolling while the modal is open, restoring whatever the
+  // page's own overflow was (rather than always resetting to "") so this
+  // doesn't clobber unrelated styling if something else set it.
+  const previousOverflow = document.body.style.overflow;
+  document.body.style.overflow = "hidden";
+
+  document.body.appendChild(overlay);
+  okBtn.focus();
+}
+
 function renderPreferences() {
   const main = document.getElementById("main");
   main.innerHTML = "";
@@ -1593,10 +1683,13 @@ function renderPreferences() {
   resetBtn.className = "preferences-reset-btn";
   resetBtn.textContent = "Reset to defaults";
   resetBtn.addEventListener("click", () => {
-    if (confirm("Reset ALL preferences back to their defaults? This can't be undone.")) {
-      localStorage.removeItem("itemPreferences");
-      route();
-    }
+    showConfirmModal(
+      "Reset ALL preferences back to their defaults?\nThis can't be undone.",
+      () => {
+        localStorage.removeItem("itemPreferences");
+        route();
+      },
+    );
   });
   header.appendChild(resetBtn);
 

@@ -297,6 +297,7 @@ a:hover {
 .boss-wiki-link:hover {
   color: var(--text);
   border-color: var(--accent-dim);
+  text-decoration: none;
 }
 
 .preferences-reset-btn {
@@ -884,4 +885,71 @@ a:hover {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+/* -------- Custom confirm modal -------- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-dialog {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.modal-message {
+  margin: 0 0 20px 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  /* text-align: center; */
+  white-space: pre-line;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.modal-btn {
+  padding: 7px 16px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.modal-btn-cancel {
+  background: transparent;
+  color: var(--text-dim);
+}
+
+.modal-btn-cancel:hover {
+  color: var(--text);
+  border-color: var(--accent-dim);
+}
+
+.modal-btn-confirm {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+.modal-btn-confirm:hover {
+  filter: brightness(1.1);
 }
