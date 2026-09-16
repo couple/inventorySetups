@@ -364,6 +364,14 @@ function resolveItem(id) {
     capitalizedPage = "Scythe_of_Vitur";
   }
 
+  if (capitalizedPage === "Sanguine_scythe_of_vitur") {
+    capitalizedPage = "Sanguine_Scythe_of_Vitur";
+  }
+
+  if (capitalizedPage === "Holy_scythe_of_vitur") {
+    capitalizedPage = "Holy_Scythe_of_Vitur";
+  }
+
   if (capitalizedPage === "Volatile_nightmare_staff") {
     capitalizedPage = "Volatile_Nightmare_staff";
   }

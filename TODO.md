@@ -39,6 +39,7 @@
 - Should pref tests be default ids -> mapped by prefs? or just testing ids in pref data (current)
 - Normal pouch on alt preferences, rp still has 4 on invent setups
 - Item preference hover tooltips changes
+- Item links to wiki not working for some that were changed for images (e.g. Sunlight_moth_mix2_dose)
 
 ## Feature ideas
 - Inventory setups -> bank tag layout - define icon (use boss pet ids, banktag:name,id)

@@ -1642,8 +1642,8 @@ const ITEM_PREFERENCES = [
     label: "Scythe of Vitur",
     variants: [
       { id: 22325, name: "Scythe of Vitur" },
-      { id: 25736, name: "Holy scythe of vitur" },
-      { id: 25739, name: "Sanguine scythe of vitur" },
+      { id: 25736, name: "Holy Scythe of Vitur" },
+      { id: 25739, name: "Sanguine Scythe of Vitur" },
     ],
     default: 25739,
     aliases: [25740],
