@@ -52,6 +52,10 @@ const FAQ = [
 // Newest first. Shown on the home page.
 const CHANGELOG = [
   {
+    date: "2026-09-18",
+    text: "Added TOA 500s setup. Improved CM7s and HMT.",
+  },
+  {
     date: "2026-09-12",
     text: "Added CM7s and more TOA setups. More notes for bosses and a link to the wiki next to each bosses name.\nAdded the ability to choose the setup name before export and change what variants of items are used in the setups.",
   },
@@ -268,7 +272,7 @@ const BOSSES = [
       {
         key: "hmt",
         label: "HMT",
-        notes: "Guide - https://discord.com/channels/284739382219505665/1550263210878443540",
+        notes: "HMT Guide - https://discord.com/channels/284739382219505665/1550263210878443540",
         setups: [
           {
             label: "South Mage",
@@ -392,7 +396,7 @@ const BOSSES = [
       {
         key: "7s",
         label: "7s",
-        notes: "Core 5s with two leech roles added.\nGuide - https://discord.com/channels/284739382219505665/1550277498489667614", // 5s core + below
+        notes: "Core 5s with two leech roles added.\n7s Guide - https://discord.com/channels/284739382219505665/1550277498489667614", // 5s core + below
         setups: [
           {
             label: "Horn Leech",
@@ -411,12 +415,11 @@ const BOSSES = [
     ],
   },
   { name: "Tombs of Amascut", group: "Raids",
-    notes: "Prepots: anti-venom, divine pots and heart.",
     modes: [
       {
         key: "400s",
         label: "400s",
-        notes: "Should be 1 bgs, 1 keris and half sbs, half arc.\nAdren pot Zebak, Akkha (zcb every shadow) and Wardens.\nSurge pot Baba, Zebak and Wardens.\nSave ZCB specs for keris where applicable.",
+        notes: "Prepots: anti-venom, divine pots and heart.\nShould be 1 bgs, 1 keris and half sbs, half arc.\nAdren pot Zebak, Akkha (zcb every shadow) and Wardens.\nSurge pot Baba, Zebak and Wardens.\nSave ZCB specs for keris where applicable.",
         setups: [
           {
             label: "TOA BGS",
@@ -451,13 +454,15 @@ const BOSSES = [
       {
         key: "500s",
         label: "500s",
-        notes: "",
+        notes: "Prepots: divine range, prayer regen and anti-venom.\nGuide - https://discord.com/channels/284739382219505665/1550485355755733103", //\nOne person can bring red keris and spec: 2x obelisk, 1x core 1 and 1x second down.
         setups: [
           {
             label: "",
-            raw: "",
-            updated: "2026-09-02",
-            sb: -1,
+            raw: "banktaglayoutsplugin:toa 8man ayak 500s,24664:1,21945:2,27246:4,29804:5,28256:6,28254:7,21784:8,12002:9,33595:10,24133:12,22981:13,28258:14,27552:15,31113:16,24666:17,25819:18,26374:20,33639:21,27238:22,12926:23,24668:25,28906:28,26235:29,27241:30,20997:31,31106:32,31097:33,25975:34,27276:36,5698:37,10925:38,10925:39,27211:44,25734:45,10925:46,10925:47,30000:48,13441:49,27291:52,27641:53,30875:54,27509:55,13441:56,27202:61,565:62,30843:63,27287:68,229:69,560:70,554:71,banktag:toa 8man ayak 500s,27385,27211,27202,30875,27246,27241,27238,30843,27291,27287,27275,-21784,-33639,29804,26374,560,554,565,229,27509,26235,27552,28906,27641,21944,30000,31106,21784,31113,-28256,-28254,-28258,28258,28256,28254,20997,-12002,12926,33595,10925,33639,22981,31097,5698,12002,-24664,-24666,-24668,13441,24133,24664,25975,24666,24668,25734,25818",
+            updated: "2026-09-18",
+            sb: 3,
+            notes: "Menaphite and red keris explained in guide.",
+            // notes: "You can sip a 1 dose menaphite remedy at the Zebak barrier to break the divine effect and praying preserve will allow you to be 108-109 range for the ZCB at Kephri last phase. Imbue heart after the remedy is sipped not at the bank.",
           },
         ],
       },
@@ -2029,6 +2034,12 @@ const ITEM_PREFERENCES = [
       { id: 28025, name: "Dragon dagger (cr)(p++)" },
     ],
   },
+  {
+    type: "item",
+    key: "rapier",
+    label: "Ghrazi rapier",
+    variants: [22324, 25734], default: 25734
+  },
 ];
 
 // ---- Manual item substitutions ----
@@ -2067,5 +2078,5 @@ const PREFERENCES_TEST_LAYOUT = [
   "capesmain:infernal", "capesmain:quiver", "capesmain:mage","slayerhelm","blowpipe","godswords:zamorak","sceptres:shadow","voidwaker",
   "rancour","occultmain","avernic","hiltmain","capesmain:teleport","runepouchmain","fangmain","maul",
   "sangmain","wardmain","scy","claws","dinhs","sra","venatorbow","pickaxe",
-  null, null, null, null, null, null, null, null,
+  "rapier", null, null, null, null, null, null, null,
 ];
