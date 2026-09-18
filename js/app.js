@@ -561,6 +561,18 @@ function resolveItem(id) {
     capitalizedPage = "3rd_Age_pickaxe";
   }  
 
+  if (cleanPage === "sunlight_moth_mix2_dose") {
+    cleanPage  = "Sunlight_moth_mix#2_dose";
+  }  
+
+  // if (cleanPage == "Sunlight_moth_mix#2_dose"){
+  //   return {
+  //     name,
+  //     icon: `${WIKI}/images/${capitalizedPage}.png?5229c`,
+  //     link: `${WIKI}/w/${cleanPage}`
+  //   };
+  // }
+
   return {
     name,
     icon: `${WIKI}/images/${capitalizedPage}.png`,
