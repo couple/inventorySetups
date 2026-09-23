@@ -6,7 +6,6 @@
 - Maggot king 1+1
 - Chaos ele
 - KQ solo
-- Toa 500s
 - KBD 1+1
 - Megascale setups
 - PK / cm mass / nex mass
@@ -26,7 +25,6 @@
 - Look out for missing bank tag icons (spades) and broken links to images (similar to sunlight moths)
 - Cerb solo
 - Solo CM / TOA
-- CM7s kisten leech+prep
 - Kril alt masori pieces
 - Rings wildy bosses
 - Hard food type check (marlin vs angler vs antelope)
@@ -35,7 +33,7 @@
 - Fix "lazy" solution for "f":true removal in test file
 - Should pref tests be default ids -> mapped by prefs? or just testing ids in pref data (current)
 - Normal pouch on alt preferences, rp still has 4 on invent setups
-- Item preference hover tooltips changes
+- Item preference hover tooltips changes (sets)
 
 ## Feature ideas
 - Inventory setups -> bank tag layout - define icon (use boss pet ids, banktag:name,id)
@@ -45,3 +43,4 @@
 - Image embed when sending seutp link
 - Toa 400s -> disc guide
 - Better way of generating images
+- Mobile for: scurrius, sarachnis, kbd, scurrius

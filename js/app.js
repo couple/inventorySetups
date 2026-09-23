@@ -520,6 +520,14 @@ function resolveItem(id) {
     capitalizedPage = "Imbued_Zamorak_cape";
   }
 
+  if (capitalizedPage === "Pharaoh's_sceptre") {
+    capitalizedPage = "Pharaoh's_sceptre_(1)";
+  }
+
+  if (capitalizedPage === "Water_container_(tombs_of_amascut)") {
+    capitalizedPage = "Water_container_(Tombs_of_Amascut)";
+  }
+
   // if (capitalizedPage === "Ring_of_suffering_(i)recoil") {
   //   capitalizedPage = "Ring_of_suffering_(i)";
   // }
@@ -561,8 +569,14 @@ function resolveItem(id) {
     capitalizedPage = "3rd_Age_pickaxe";
   }  
 
+  ////////////////////////////////////////////////////////////////////
+
   if (cleanPage === "sunlight_moth_mix2_dose") {
     cleanPage  = "Sunlight_moth_mix#2_dose";
+  }  
+
+  if (cleanPage === "water_container_(tombs_of_amascut)") {
+    cleanPage  = "Water_container_(Tombs_of_Amascut)";
   }  
 
   // if (cleanPage == "Sunlight_moth_mix#2_dose"){

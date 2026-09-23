@@ -454,15 +454,20 @@ const BOSSES = [
       {
         key: "500s",
         label: "500s",
-        notes: "Prepots: divine range, prayer regen and anti-venom.\nGuide - https://discord.com/channels/284739382219505665/1550485355755733103", //\nOne person can bring red keris and spec: 2x obelisk, 1x core 1 and 1x second down.
+        notes: "Prepots: divine range, regular super combat, prayer regen and anti-venom.\nGuide - https://discord.com/channels/284739382219505665/1550485355755733103", //\nOne person can bring red keris and spec: 2x obelisk, 1x core 1 and 1x second down.
         setups: [
           {
-            label: "",
-            raw: "banktaglayoutsplugin:toa 8man ayak 500s,24664:1,21945:2,27246:4,29804:5,28256:6,28254:7,21784:8,12002:9,33595:10,24133:12,22981:13,28258:14,27552:15,31113:16,24666:17,25819:18,26374:20,33639:21,27238:22,12926:23,24668:25,28906:28,26235:29,27241:30,20997:31,31106:32,31097:33,25975:34,27276:36,5698:37,10925:38,10925:39,27211:44,25734:45,10925:46,10925:47,30000:48,13441:49,27291:52,27641:53,30875:54,27509:55,13441:56,27202:61,565:62,30843:63,27287:68,229:69,560:70,554:71,banktag:toa 8man ayak 500s,27385,27211,27202,30875,27246,27241,27238,30843,27291,27287,27275,-21784,-33639,29804,26374,560,554,565,229,27509,26235,27552,28906,27641,21944,30000,31106,21784,31113,-28256,-28254,-28258,28258,28256,28254,20997,-12002,12926,33595,10925,33639,22981,31097,5698,12002,-24664,-24666,-24668,13441,24133,24664,25975,24666,24668,25734,25818",
-            updated: "2026-09-18",
+            label: "Main",
+            raw: "banktaglayoutsplugin:toa ayak 500s,26948:64,24664:1,21945:2,27246:4,29804:5,28256:6,560:70,28254:7,554:71,21784:8,12002:9,33595:10,24133:12,22981:13,28258:14,27552:15,31113:16,24666:17,25818:18,26374:20,33639:21,27238:22,12926:23,24668:25,28906:28,26235:29,27241:30,20997:31,31106:32,31097:33,25975:34,27275:36,5698:37,10925:38,10925:39,27295:44,27690:45,10925:46,10925:47,30000:48,13441:49,27291:52,27641:53,30875:54,27509:55,13441:56,565:62,30843:63,banktag:toa ayak 500s,27385,30875,27246,27241,27238,30843,27295,27291,27275,-21784,-33639,29804,27690,26374,560,554,565,27509,26235,27552,28906,27641,21944,30000,31106,21784,31113,-28256,-28254,-28258,28258,28256,28254,20997,-12002,12926,-27690,33595,10925,33639,22981,31097,5698,26948,12002,-24664,-24666,-24668,13441,24133,24664,25975,24666,24668,25818",
+            updated: "2026-09-23",
             sb: 3,
-            notes: "Menaphite and red keris explained in guide.",
-            // notes: "You can sip a 1 dose menaphite remedy at the Zebak barrier to break the divine effect and praying preserve will allow you to be 108-109 range for the ZCB at Kephri last phase. Imbue heart after the remedy is sipped not at the bank.",
+          },
+          {
+            label: "Red Keris",
+            raw: "banktaglayoutsplugin:toa red keris ayak 500s,26948:64,28254:1,21945:2,27276:4,12002:5,24666:6,560:70,24664:7,554:71,24133:8,29804:9,33595:10,21784:12,31106:13,24668:14,27295:15,30759:16,28256:17,27552:18,26374:20,33639:21,27238:22,12926:23,28258:25,28906:28,26235:29,27241:30,20997:31,22981:32,31097:33,25975:34,27287:36,24417:37,10925:38,10925:39,27246:44,25818:45,10925:46,10925:47,30000:48,13441:49,27291:52,27641:53,30875:54,27509:55,13441:56,565:62,30843:63,banktag:toa red keris ayak 500s,27385,30875,27246,27241,27238,30843,27295,27291,27287,27275,-21784,-33639,30759,29804,26374,560,554,565,27509,26235,27552,28906,27641,21944,30000,31106,21784,-28256,-28254,-28258,28258,28256,28254,20997,-12002,12926,33595,10925,33639,22981,31097,26948,12002,-24664,-24666,-24668,13441,24133,24664,25975,24666,24668,24417,25818",
+            updated: "2026-09-23",
+            sb: 3,
+            notes: "Inquisitor's mace > Ghrazi rapier > Blade of Saeldor > Voidwaker"
           },
         ],
       },
@@ -2034,12 +2039,12 @@ const ITEM_PREFERENCES = [
       { id: 28025, name: "Dragon dagger (cr)(p++)" },
     ],
   },
-  {
-    type: "item",
-    key: "rapier",
-    label: "Ghrazi rapier",
-    variants: [22324, 25734], default: 25734
-  },
+  // {
+  //   type: "item",
+  //   key: "rapier",
+  //   label: "Ghrazi rapier",
+  //   variants: [22324, 25734], default: 25734
+  // },
 ];
 
 // ---- Manual item substitutions ----
@@ -2078,5 +2083,5 @@ const PREFERENCES_TEST_LAYOUT = [
   "capesmain:infernal", "capesmain:quiver", "capesmain:mage","slayerhelm","blowpipe","godswords:zamorak","sceptres:shadow","voidwaker",
   "rancour","occultmain","avernic","hiltmain","capesmain:teleport","runepouchmain","fangmain","maul",
   "sangmain","wardmain","scy","claws","dinhs","sra","venatorbow","pickaxe",
-  "rapier", null, null, null, null, null, null, null,
+  null, null, null, null, null, null, null, null,
 ];

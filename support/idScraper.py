@@ -121,6 +121,8 @@ if "23742" in items:
     items["23744"] = items["23742"]
 if "4699" in items:
     items["19266"] = items["4699"]
+if "30843" in items:
+    items["30844"] = items["30843"]
 
 
 # Prepare JavaScript content
