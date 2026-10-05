@@ -520,6 +520,18 @@ function resolveItem(id) {
     capitalizedPage = "Imbued_Zamorak_cape";
   }
 
+  if (capitalizedPage === "Imbued_saradomin_cape_(deadman)") {
+    capitalizedPage = "Imbued_Saradomin_cape_(Deadman)";
+  }
+
+  if (capitalizedPage === "Imbued_guthix_cape_(deadman)") {
+    capitalizedPage = "Imbued_Guthix_cape_(Deadman)";
+  }
+
+  if (capitalizedPage === "Imbued_zamorak_cape_(deadman)") {
+    capitalizedPage = "Imbued_Zamorak_cape_(Deadman)";
+  }
+
   if (capitalizedPage === "Pharaoh's_sceptre") {
     capitalizedPage = "Pharaoh's_sceptre_(1)";
   }

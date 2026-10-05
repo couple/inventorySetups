@@ -9,12 +9,14 @@
 - KBD 1+1
 - Megascale setups
 - PK / cm mass / nex mass
+- Slaughter bracelets to all slayer bosses
 
 ## Notes to add
 - Item "leak" warning
 - Has to be bank tag LAYOUT
 - KQ 1+1 instructions / vod
 - More notes / guides for bosses
+- CM3s prepots
 
 ## Preferences to add
 - Ring of suffering preference for alt (imbue vs non)
@@ -44,3 +46,4 @@
 - Toa 400s -> disc guide
 - Better way of generating images
 - Mobile for: scurrius, sarachnis, kbd, scurrius
+- Inventory setups colour -> red - highlight items -> true ("hc":"#FFFF0000","hd":true,"fb":true) (other HL setting?)
