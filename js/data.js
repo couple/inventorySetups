@@ -642,7 +642,7 @@ const BOSSES = [
         itemOverrides: {
           "capesmain:mage": {
             groups: [
-              { match: [21791, 24248, 21793, 24249, 21795, 24250], use: 21795 }, // any not-max -> Imbued Zamorak cape
+              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617], use: 21795 }, // any not-max -> Imbued Zamorak cape
               { match: [21776, 24232, 21784, 24234, 21780, 24233], use: 21780 }, // any max -> Imbued Zamorak max cape
             ],
           },
@@ -658,7 +658,7 @@ const BOSSES = [
         itemOverrides: {
           "capesmain:mage": {
             groups: [
-              { match: [21791, 24248, 21793, 24249, 21795, 24250], use: 21795 }, // any not-max -> Imbued Zamorak cape
+              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617], use: 21795 }, // any not-max -> Imbued Zamorak cape
               { match: [21776, 24232, 21784, 24234, 21780, 24233], use: 21780 }, // any max -> Imbued Zamorak max cape
             ],
           },
@@ -673,7 +673,7 @@ const BOSSES = [
         itemOverrides: {
           "capesalt:magealt": {
             groups: [
-              { match: [21791, 24248, 21793, 24249, 21795, 24250], use: 21795 }, // any not-max -> Imbued Zamorak cape
+              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617], use: 21795 }, // any not-max -> Imbued Zamorak cape
               { match: [21776, 24232, 21784, 24234, 21780, 24233], use: 21780 }, // any max -> Imbued Zamorak max cape
             ],
           },
@@ -693,7 +693,7 @@ const BOSSES = [
         itemOverrides: {
           "capesmain:mage": {
             groups: [
-              { match: [21791, 24248, 21793, 24249, 21795, 24250], use: 21795 }, // any not-max -> Imbued Zamorak cape
+              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617], use: 21795 }, // any not-max -> Imbued Zamorak cape
               { match: [21776, 24232, 21784, 24234, 21780, 24233], use: 21780 }, // any max -> Imbued Zamorak max cape
             ],
           },
@@ -709,7 +709,7 @@ const BOSSES = [
         itemOverrides: {
           "capesmain:mage": {
             groups: [
-              { match: [21791, 24248, 21793, 24249, 21795, 24250], use: 21795 }, // any not-max -> Imbued Zamorak cape
+              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617], use: 21795 }, // any not-max -> Imbued Zamorak cape
               { match: [21776, 24232, 21784, 24234, 21780, 24233], use: 21780 }, // any max -> Imbued Zamorak max cape
             ],
           },
@@ -724,7 +724,7 @@ const BOSSES = [
         itemOverrides: {
           "capesalt:magealt": {
             groups: [
-              { match: [21791, 24248, 21793, 24249, 21795, 24250], use: 21795 }, // any not-max -> Imbued Zamorak cape
+              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617], use: 21795 }, // any not-max -> Imbued Zamorak cape
               { match: [21776, 24232, 21784, 24234, 21780, 24233], use: 21780 }, // any max -> Imbued Zamorak max cape
             ],
           },
@@ -756,7 +756,7 @@ const BOSSES = [
         itemOverrides: {
           "capesmain:mage": {
             groups: [
-              { match: [21791, 24248, 21793, 24249, 21795, 24250], use: 21795 }, // any not-max -> Imbued Zamorak cape
+              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617], use: 21795 }, // any not-max -> Imbued Zamorak cape
               { match: [21776, 24232, 21784, 24234, 21780, 24233], use: 21780 }, // any max -> Imbued Zamorak max cape
             ],
           },
@@ -771,7 +771,7 @@ const BOSSES = [
         itemOverrides: {
           "capesalt:magealt": {
             groups: [
-              { match: [21791, 24248, 21793, 24249, 21795, 24250], use: 21795 }, // any not-max -> Imbued Zamorak cape
+              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617], use: 21795 }, // any not-max -> Imbued Zamorak cape
               { match: [21776, 24232, 21784, 24234, 21780, 24233], use: 21780 }, // any max -> Imbued Zamorak max cape
             ],
           },
@@ -791,7 +791,7 @@ const BOSSES = [
         itemOverrides: {
           "capesmain:mage": {
             groups: [
-              { match: [21791, 24248, 21793, 24249, 21795, 24250], use: 21791 }, // any not-max -> Imbued Zamorak cape
+              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617], use: 21791 }, // any not-max -> Imbued Zamorak cape
               { match: [21776, 24232, 21784, 24234, 21780, 24233], use: 21776 }, // any max -> Imbued Zamorak max cape
             ],
           },
@@ -1569,6 +1569,7 @@ const ITEM_PREFERENCES = [
           { id: 24233, name: "Imbued Zamorak max cape (l)" },
         ],
         default: 21795,
+        aliases: [21785],
       },
     ],
     // Piece variant counts no longer line up (mage has 9, teleport has 3
@@ -1886,6 +1887,7 @@ const ITEM_PREFERENCES = [
           { id: 24233, name: "Imbued Zamorak max cape (l)" },
         ],
         default: 21784,
+        aliases: [21785],
       },
       {
         key: "teleport",
