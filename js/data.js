@@ -52,6 +52,10 @@ const FAQ = [
 // Newest first. Shown on the home page.
 const CHANGELOG = [
   {
+    date: "2026-10-17",
+    text: "Added highlight options and mass export for inventory setups.",
+  },
+  {
     date: "2026-09-18",
     text: "Added TOA 500s setup. Improved CM7s and HMT.",
   },
@@ -517,7 +521,7 @@ const BOSSES = [
     solo: [      
       {
         label: "Main",
-        raw: "banktaglayoutsplugin:kqmain,24664:1,27641:4,30125:5,30125:6,560:70,10925:7,554:71,21784:8,12002:9,22947:10,10925:12,10925:13,10925:14,10925:15,27275:16,24666:17,10925:20,10925:21,10925:22,10925:23,24668:25,10925:28,10925:29,10925:30,10925:31,31106:32,31097:33,28313:34,32352:36,32352:37,32352:38,32352:39,32352:44,32352:45,32352:46,32352:47,22586:48,32352:49,32352:52,13280:53,25818:54,27509:55,24585:56,13280:57,565:62,30843:63,banktag:kqmain,12647,30843,27275,-21784,28313,560,554,565,27509,27641,30125,31106,21784,-12002,22586,-13280,10925,22947,32352,31097,13280,12002,-24664,-24666,-24668,24664,24666,24668,25818,24585",
+        raw: "banktaglayoutsplugin:kqmaindolo,24664:1,27641:4,30125:5,30125:6,560:70,10925:7,554:71,21784:8,12002:9,22947:10,10925:12,10925:13,10925:14,10925:15,27275:16,24666:17,10925:20,10925:21,10925:22,10925:23,24668:25,10925:28,10925:29,10925:30,10925:31,31106:32,31097:33,28313:34,32352:36,32352:37,32352:38,32352:39,32352:44,32352:45,32352:46,32352:47,22586:48,32352:49,32352:52,13280:53,25818:54,27509:55,24585:56,13280:57,565:62,30843:63,banktag:kqmain,12647,30843,27275,-21784,28313,560,554,565,27509,27641,30125,31106,21784,-12002,22586,-13280,10925,22947,32352,31097,13280,12002,-24664,-24666,-24668,24664,24666,24668,25818,24585",
         updated: "2026-09-01",
         sb: 3,
         notes: "Main suicides with a looting bag and inventory full of marlins at the start of the trip.",
@@ -642,8 +646,8 @@ const BOSSES = [
         itemOverrides: {
           "capesmain:mage": {
             groups: [
-              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617], use: 21795 }, // any not-max -> Imbued Zamorak cape
-              { match: [21776, 24232, 21784, 24234, 21780, 24233], use: 21780 }, // any max -> Imbued Zamorak max cape
+              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617, 34633, 34637, 34607], use: 21795 }, // any not-max -> Imbued Zamorak cape
+              { match: [21776, 24232, 21784, 24234, 21780, 24233, 34625], use: 21780 }, // any max -> Imbued Zamorak max cape
             ],
           },
         },
@@ -658,8 +662,8 @@ const BOSSES = [
         itemOverrides: {
           "capesmain:mage": {
             groups: [
-              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617], use: 21795 }, // any not-max -> Imbued Zamorak cape
-              { match: [21776, 24232, 21784, 24234, 21780, 24233], use: 21780 }, // any max -> Imbued Zamorak max cape
+              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617, 34633, 34637, 34607], use: 21795 }, // any not-max -> Imbued Zamorak cape
+              { match: [21776, 24232, 21784, 24234, 21780, 24233, 34625], use: 21780 }, // any max -> Imbued Zamorak max cape
             ],
           },
         },
@@ -673,8 +677,8 @@ const BOSSES = [
         itemOverrides: {
           "capesalt:magealt": {
             groups: [
-              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617], use: 21795 }, // any not-max -> Imbued Zamorak cape
-              { match: [21776, 24232, 21784, 24234, 21780, 24233], use: 21780 }, // any max -> Imbued Zamorak max cape
+              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617, 34633, 34637, 34607], use: 21795 }, // any not-max -> Imbued Zamorak cape
+              { match: [21776, 24232, 21784, 24234, 21780, 24233, 34625], use: 21780 }, // any max -> Imbued Zamorak max cape
             ],
           },
         },
@@ -693,8 +697,8 @@ const BOSSES = [
         itemOverrides: {
           "capesmain:mage": {
             groups: [
-              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617], use: 21795 }, // any not-max -> Imbued Zamorak cape
-              { match: [21776, 24232, 21784, 24234, 21780, 24233], use: 21780 }, // any max -> Imbued Zamorak max cape
+              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617, 34633, 34637, 34607], use: 21795 }, // any not-max -> Imbued Zamorak cape
+              { match: [21776, 24232, 21784, 24234, 21780, 24233, 34625], use: 21780 }, // any max -> Imbued Zamorak max cape
             ],
           },
         },
@@ -709,8 +713,8 @@ const BOSSES = [
         itemOverrides: {
           "capesmain:mage": {
             groups: [
-              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617], use: 21795 }, // any not-max -> Imbued Zamorak cape
-              { match: [21776, 24232, 21784, 24234, 21780, 24233], use: 21780 }, // any max -> Imbued Zamorak max cape
+              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617, 34633, 34637, 34607], use: 21795 }, // any not-max -> Imbued Zamorak cape
+              { match: [21776, 24232, 21784, 24234, 21780, 24233, 34625], use: 21780 }, // any max -> Imbued Zamorak max cape
             ],
           },
         },
@@ -724,8 +728,8 @@ const BOSSES = [
         itemOverrides: {
           "capesalt:magealt": {
             groups: [
-              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617], use: 21795 }, // any not-max -> Imbued Zamorak cape
-              { match: [21776, 24232, 21784, 24234, 21780, 24233], use: 21780 }, // any max -> Imbued Zamorak max cape
+              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617, 34633, 34637, 34607], use: 21795 }, // any not-max -> Imbued Zamorak cape
+              { match: [21776, 24232, 21784, 24234, 21780, 24233, 34625], use: 21780 }, // any max -> Imbued Zamorak max cape
             ],
           },
         },
@@ -756,8 +760,8 @@ const BOSSES = [
         itemOverrides: {
           "capesmain:mage": {
             groups: [
-              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617], use: 21795 }, // any not-max -> Imbued Zamorak cape
-              { match: [21776, 24232, 21784, 24234, 21780, 24233], use: 21780 }, // any max -> Imbued Zamorak max cape
+              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617, 34633, 34637, 34607], use: 21795 }, // any not-max -> Imbued Zamorak cape
+              { match: [21776, 24232, 21784, 24234, 21780, 24233, 34625], use: 21780 }, // any max -> Imbued Zamorak max cape
             ],
           },
         },
@@ -771,8 +775,8 @@ const BOSSES = [
         itemOverrides: {
           "capesalt:magealt": {
             groups: [
-              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617], use: 21795 }, // any not-max -> Imbued Zamorak cape
-              { match: [21776, 24232, 21784, 24234, 21780, 24233], use: 21780 }, // any max -> Imbued Zamorak max cape
+              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617, 34633, 34637, 34607], use: 21795 }, // any not-max -> Imbued Zamorak cape
+              { match: [21776, 24232, 21784, 24234, 21780, 24233, 34625], use: 21780 }, // any max -> Imbued Zamorak max cape
             ],
           },
         },
@@ -791,8 +795,8 @@ const BOSSES = [
         itemOverrides: {
           "capesmain:mage": {
             groups: [
-              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617], use: 21791 }, // any not-max -> Imbued Zamorak cape
-              { match: [21776, 24232, 21784, 24234, 21780, 24233], use: 21776 }, // any max -> Imbued Zamorak max cape
+              { match: [21791, 24248, 21793, 24249, 21795, 24250, 29615, 29617, 34633, 34637, 34607], use: 21791 }, // any not-max -> Imbued Zamorak cape
+              { match: [21776, 24232, 21784, 24234, 21780, 24233, 34625], use: 21776 }, // any max -> Imbued Zamorak max cape
             ],
           },
         },
@@ -887,7 +891,7 @@ const BOSSES = [
     solo: [
       {
         label: "",
-        raw: "banktaglayoutsplugin:cerbmain,25912:1,29589:4,12821:5,3024:6,554:70,3024:7,560:71,24133:8,29804:9,22947:10,29577:12,24780:13,3024:14,3024:15,25739:16,24420:17,13441:20,21183:21,3024:22,3024:23,24421:25,13441:28,13441:29,3024:30,3024:31,22981:32,31097:33,28307:34,13441:36,13441:37,3024:38,3024:39,21389:44,13441:45,23685:46,23685:47,13280:52,25818:53,561:54,27281:55,565:62,30843:63,banktag:cerbmain,13247,30843,27281,28307,29804,560,561,554,565,27509,22947,29589,29577,21183,-13280,12821,23685,22981,31097,21389,-27281,3024,13280,13441,24133,25912,24780,24420,24421,25739,25818",
+        raw: "banktaglayoutsplugin:cerb,25912:1,29589:4,12821:5,3024:6,554:70,3024:7,560:71,24133:8,29804:9,22947:10,29577:12,24780:13,3024:14,3024:15,25739:16,24420:17,13441:20,21183:21,3024:22,3024:23,24421:25,13441:28,13441:29,3024:30,3024:31,22981:32,31097:33,28307:34,13441:36,13441:37,3024:38,3024:39,21389:44,13441:45,23685:46,23685:47,13280:52,25818:53,561:54,27281:55,565:62,30843:63,banktag:cerbmain,13247,30843,27281,28307,29804,560,561,554,565,27509,22947,29589,29577,21183,-13280,12821,23685,22981,31097,21389,-27281,3024,13280,13441,24133,25912,24780,24420,24421,25739,25818",
         updated: "2026-08-28",
         sb: 3,
       },
@@ -1318,7 +1322,7 @@ const BOSSES = [
       },
       {
         label: "Deeper Doom",
-        raw: "banktaglayoutsplugin:doom,26475:1,33596:2,26233:4,29796:5,23733:6,9075:70,23733:7,563:71,28906:8,33639:9,22947:10,31113:12,29591:13,23733:14,23733:15,20997:16,26469:17,29589:20,24510:21,23733:22,23733:23,26471:25,23733:28,23733:29,23733:30,23733:31,26467:32,31097:33,28310:34,23733:36,23733:37,23733:38,23733:39,3024:44,3024:45,23733:46,23733:47,6685:52,6685:53,31099:54,27509:55,565:62,30843:63,banktag:doom,31091,30843,28310,-33639,29796,563,26475,26471,26469,26467,565,27509,26233,6685,28906,31113,29591,29589,20997,23733,33595,22947,33639,31097,31099,9075,3024,24425",
+        raw: "banktaglayoutsplugin:deepdoom,26475:1,33596:2,26233:4,29796:5,23733:6,9075:70,23733:7,563:71,28906:8,33639:9,22947:10,31113:12,29591:13,23733:14,23733:15,20997:16,26469:17,29589:20,24510:21,23733:22,23733:23,26471:25,23733:28,23733:29,23733:30,23733:31,26467:32,31097:33,28310:34,23733:36,23733:37,23733:38,23733:39,3024:44,3024:45,23733:46,23733:47,6685:52,6685:53,31099:54,27509:55,565:62,30843:63,banktag:doom,31091,30843,28310,-33639,29796,563,26475,26471,26469,26467,565,27509,26233,6685,28906,31113,29591,29589,20997,23733,33595,22947,33639,31097,31099,9075,3024,24425",
         updated: "2026-09-01",
         sb: 2,
         notes: "Uncharge ayak for death runes.",
@@ -1561,12 +1565,16 @@ const ITEM_PREFERENCES = [
           { id: 21795, name: "Imbued Zamorak cape" },
           { id: 24250, name: "Imbued Zamorak cape (l)" },
           { id: 29613, name: "Imbued Zamorak cape (Deadman)" },
+          { id: 34633, name: "Imbued Ancient cape" },
+          { id: 34637, name: "Imbued Ancient cape (l)" },
+          { id: 34607, name: "Imbued Ancient cape (Deadman)" },
           { id: 21776, name: "Imbued Saradomin max cape" },
           { id: 24232, name: "Imbued Saradomin max cape (l)" },
           { id: 21784, name: "Imbued Guthix max cape" },
           { id: 24234, name: "Imbued Guthix max cape (l)" },
           { id: 21780, name: "Imbued Zamorak max cape" },
           { id: 24233, name: "Imbued Zamorak max cape (l)" },
+          { id: 34625, name: "Imbued Ancient max cape " },
         ],
         default: 21795,
         aliases: [21785],
@@ -1879,12 +1887,16 @@ const ITEM_PREFERENCES = [
           { id: 21795, name: "Imbued Zamorak cape" },
           { id: 24250, name: "Imbued Zamorak cape (l)" },
           { id: 29613, name: "Imbued Zamorak cape (Deadman)" },
+          { id: 34633, name: "Imbued Ancient cape" },
+          { id: 34637, name: "Imbued Ancient cape (l)" },
+          { id: 34607, name: "Imbued Ancient cape (Deadman)" },
           { id: 21776, name: "Imbued Saradomin max cape" },
           { id: 24232, name: "Imbued Saradomin max cape (l)" },
           { id: 21784, name: "Imbued Guthix max cape" },
           { id: 24234, name: "Imbued Guthix max cape (l)" },
           { id: 21780, name: "Imbued Zamorak max cape" },
           { id: 24233, name: "Imbued Zamorak max cape (l)" },
+          { id: 34625, name: "Imbued Ancient max cape " },
         ],
         default: 21784,
         aliases: [21785],

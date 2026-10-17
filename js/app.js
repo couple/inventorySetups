@@ -47,6 +47,86 @@ function setGridStyle(style) {
   route(); // re-render current page so grids reflect the new layout style
 }
 
+// -------- Highlighting (Inventory Setups export codes) --------
+// Three site-wide settings that end up in every Inventory Setup code:
+//   Only missing from inventory + ignore order -> "uh":true (omitted when off)
+//   Enable highlight                           -> "hd":true (omitted when off)
+//   Highlight colour                           -> "hc":"#AARRGGBB" (always present)
+const DEFAULT_HIGHLIGHT_COLOR = "#ff0000"; // stored as #rrggbb, exported as #FFRRGGBB
+
+function getHighlightUnordered() {
+  return localStorage.getItem("highlightUnordered") === "true";
+}
+
+function setHighlightUnordered(on) {
+  localStorage.setItem("highlightUnordered", on ? "true" : "false");
+}
+
+function getHighlightEnabled() {
+  return localStorage.getItem("highlightEnabled") === "true";
+}
+
+function setHighlightEnabled(on) {
+  localStorage.setItem("highlightEnabled", on ? "true" : "false");
+}
+
+function getHighlightColor() {
+  const stored = localStorage.getItem("highlightColor");
+  return /^#[0-9a-f]{6}$/i.test(stored || "") ? stored.toLowerCase() : DEFAULT_HIGHLIGHT_COLOR;
+}
+
+function setHighlightColor(hex) {
+  localStorage.setItem("highlightColor", hex.toLowerCase());
+}
+
+// Takes Inventory Setup JSON text and rewrites its highlight fields from
+// the current site-wide settings. Non-inventory text is returned untouched.
+function applyHighlightSettings(text) {
+  if (!text) return text;
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    return text;
+  }
+  if (!data || Array.isArray(data) || !data.setup || typeof data.setup !== "object") return text;
+
+  const hc = "#FF" + getHighlightColor().slice(1).toUpperCase();
+  const old = data.setup;
+  const next = {};
+  Object.keys(old).forEach((key) => {
+    if (key === "hc" || key === "hd" || key === "uh") return;
+    next[key] = old[key];
+    if (key === "name") {
+      next.hc = hc;
+      if (getHighlightEnabled()) next.hd = true;
+    }
+  });
+  if (!("hc" in next)) {
+    next.hc = hc;
+    if (getHighlightEnabled()) next.hd = true;
+  }
+  if (getHighlightUnordered()) {
+    // keep "uh" just before "sb" like the plugin's own exports
+    const ordered = {};
+    Object.keys(next).forEach((key) => {
+      if (key === "sb") ordered.uh = true;
+      ordered[key] = next[key];
+    });
+    if (!("uh" in ordered)) ordered.uh = true;
+    data.setup = ordered;
+  } else {
+    data.setup = next;
+  }
+  return JSON.stringify(data);
+}
+
+// Single entry point for every copy/export of a setup from the site pages.
+function getSetupOutputText(setup, format, style, customName, substitutions) {
+  const text = getSetupCopyText(setup, format, style, customName, substitutions);
+  return format === "inventory" ? applyHighlightSettings(text) : text;
+}
+
 // -------- Item preferences (ornament kit swaps, etc.) --------
 // Backs the Preferences page. Lets the user swap a "default" item - every
 // place it appears, in any setup on the site - for a variant of their
@@ -516,6 +596,10 @@ function resolveItem(id) {
     capitalizedPage = "Imbued_Saradomin_cape";
   }
 
+  if (capitalizedPage === "Imbued_ancient_cape_(deadman)") {
+    capitalizedPage = "Imbued_ancient_cape_(Deadman)";
+  }
+
   if (capitalizedPage === "Imbued_zamorak_cape") {
     capitalizedPage = "Imbued_Zamorak_cape";
   }
@@ -797,7 +881,7 @@ function renderSetup(setup, headingTag) {
   const format = getCopyFormat();
   let copyText = null;
   try {
-    copyText = getSetupCopyText(setup, format, style, null, substitutions);
+    copyText = getSetupOutputText(setup, format, style, null, substitutions);
   } catch (e) {
     copyText = null;
   }
@@ -830,7 +914,7 @@ function renderSetup(setup, headingTag) {
     btn.addEventListener("click", () => {
       let text = copyText;
       try {
-        text = getSetupCopyText(setup, format, style, nameInput.value, getSubstitutionMapForSetup(setup)) || copyText;
+        text = getSetupOutputText(setup, format, style, nameInput.value, getSubstitutionMapForSetup(setup)) || copyText;
       } catch (e) {
         text = copyText;
       }
@@ -1351,6 +1435,224 @@ function buildTopNav() {
   top.appendChild(preferencesLink);
 }
 
+// -------- Export all setups --------
+// "Export all" downloads two files for the Inventory Setups plugin's mass
+// import:
+//   SetupsMassExport.json   - [{setup, layout}, ...] for every MAIN setup
+//                             (setups using the Preferences page's "Alt"
+//                             section, i.e. prefGroup "alt", are left out).
+//   SectionsMassExport.json - [{name, setups: [setupName, ...],
+//                             isMaximized: true}, ...] one per site group
+//                             (Quest, Slayer, GWD, ...), except Raids,
+//                             which is split into one section per raid
+//                             mode (see RAID_SECTION_NAMES).
+// Always Inventory Setup format (ignores the Plugin toggle), but respects
+// the Layout toggle (default / zigzag), the user's item preferences and the
+// highlighting settings, exactly like the per-setup Copy button.
+const EXPORT_SETUPS_FILENAME = "SetupsMassExport.json";
+const EXPORT_SECTIONS_FILENAME = "SectionsMassExport.json";
+
+// Section names for the Raids group, keyed by "boss name|mode key".
+const RAID_SECTION_NAMES = {
+  "Theatre of Blood|trio": "Trio ToB",
+  "Theatre of Blood|4s": "4s ToB",
+  "Theatre of Blood|hmt": "HMT",
+  "Chambers of Xeric|trio": "CM 3s",
+  "Chambers of Xeric|5s": "CM 5s",
+  "Chambers of Xeric|7s": "CM 7s",
+  "Tombs of Amascut|400s": "ToA 400s",
+  "Tombs of Amascut|500s": "ToA 500s",
+};
+
+const isMainSetup = (setup) => !setup || setup.prefGroup !== "alt";
+
+// Returns [{ name, setups: [setupObject, ...] }, ...] - main setups only,
+// in site order, with empty sections dropped.
+function collectExportSections() {
+  const sections = [];
+  GROUPS.forEach((group) => {
+    const bosses = BOSSES.filter((b) => b.group === group);
+    if (group === "Raids") {
+      bosses.forEach((boss) => {
+        getBossModes(boss).forEach((mode) => {
+          sections.push({
+            name: RAID_SECTION_NAMES[`${boss.name}|${mode.key}`] || `${boss.name} ${mode.label}`,
+            setups: mode.setups.filter(isMainSetup),
+          });
+        });
+      });
+      return;
+    }
+    const setups = [];
+    bosses.forEach((boss) => {
+      getBossModes(boss).forEach((mode) => {
+        mode.setups.filter(isMainSetup).forEach((setup) => setups.push(setup));
+      });
+    });
+    sections.push({ name: group, setups });
+  });
+  return sections.filter((section) => section.setups.length > 0);
+}
+
+function downloadJson(filename, data) {
+  const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportAllSetups() {
+  const style = getGridStyle();
+  const exportedSetups = [];
+  const exportedSections = [];
+  let skipped = 0;
+
+  collectExportSections().forEach((section) => {
+    const names = [];
+    section.setups.forEach((setup) => {
+      try {
+        const text = getSetupOutputText(setup, "inventory", style, null, getSubstitutionMapForSetup(setup));
+        if (!text) {
+          skipped++;
+          return;
+        }
+        const exported = JSON.parse(text);
+        exportedSetups.push(exported);
+        if (exported.setup && exported.setup.name) names.push(exported.setup.name);
+      } catch (e) {
+        console.error("Failed to export setup:", setup && setup.label, e);
+        skipped++;
+      }
+    });
+    if (names.length > 0) exportedSections.push({ name: section.name, setups: names, isMaximized: true });
+  });
+
+  if (exportedSetups.length === 0) {
+    alert("No setups could be exported.");
+    return;
+  }
+
+  downloadJson(EXPORT_SETUPS_FILENAME, exportedSetups);
+  // Small delay so browsers treat the second download as a separate action
+  setTimeout(() => downloadJson(EXPORT_SECTIONS_FILENAME, exportedSections), 300);
+
+  if (skipped > 0) console.warn(`Export all: ${skipped} setup(s) had no exportable data and were skipped.`);
+}
+
+// Appends `text` to `container`, turning any **double-asterisk** parts into
+// <strong> (bold) and leaving everything else (including newlines) as plain
+// text. Used for popup messages.
+function appendBoldText(container, text) {
+  String(text).split(/\*\*(.+?)\*\*/).forEach((part, i) => {
+    if (i % 2 === 1) {
+      const strong = document.createElement("strong");
+      strong.textContent = part;
+      container.appendChild(strong);
+    } else if (part) {
+      container.appendChild(document.createTextNode(part));
+    }
+  });
+}
+
+// -------- Export section (sidebar button + instructions popup) --------
+
+function buildExportSection() {
+  const el = document.getElementById("export-controls");
+  if (!el) return;
+  el.innerHTML = "";
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "export-all-btn";
+  btn.textContent = "Export";
+  btn.title = "Download all main setups and sections for mass import";
+  btn.addEventListener("click", showExportModal);
+  el.appendChild(btn);
+}
+
+function showExportModal() {
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+
+  const dialog = document.createElement("div");
+  dialog.className = "modal-dialog export-modal";
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  dialog.setAttribute("aria-label", "Export all setups");
+
+  const title = document.createElement("h3");
+  title.className = "export-modal-title";
+  title.textContent = "Export all main setups";
+  dialog.appendChild(title);
+
+  // const intro = document.createElement("p");
+  // intro.className = "modal-message";
+  // intro.textContent = "Downloads two files for mass importing into the Inventory Setups plugin:";
+  // dialog.appendChild(intro);
+
+  const steps = document.createElement("ul");
+  steps.className = "export-modal-steps";
+  [
+    "This only works for the inventory setups plugin.",
+    `${EXPORT_SETUPS_FILENAME} - every main setup data.`,
+    `${EXPORT_SECTIONS_FILENAME} - sections for all setups.`,
+    "Right click the import button and select mass import.", 
+    "Import the setups file **FIRST** and then the sections file.",
+  ].forEach((text) => {
+    const li = document.createElement("li");
+    appendBoldText(li, text); // **double asterisks** = bold
+    steps.appendChild(li);
+  });
+  dialog.appendChild(steps);
+
+  const actions = document.createElement("div");
+  actions.className = "modal-actions";
+
+  const close = () => {
+    overlay.remove();
+    document.removeEventListener("keydown", onKeydown);
+    document.body.style.overflow = previousOverflow;
+  };
+
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "modal-btn modal-btn-cancel";
+  closeBtn.textContent = "Cancel";
+  closeBtn.addEventListener("click", close);
+
+  const downloadBtn = document.createElement("button");
+  downloadBtn.type = "button";
+  downloadBtn.className = "modal-btn modal-btn-confirm";
+  downloadBtn.textContent = "Download";
+  downloadBtn.addEventListener("click", () => {
+    exportAllSetups();
+    downloadBtn.textContent = "Downloaded!"; // stays until the popup is closed
+  });
+
+  actions.appendChild(closeBtn);
+  actions.appendChild(downloadBtn);
+  dialog.appendChild(actions);
+  overlay.appendChild(dialog);
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+  function onKeydown(e) {
+    if (e.key === "Escape") close();
+  }
+  document.addEventListener("keydown", onKeydown);
+
+  const previousOverflow = document.body.style.overflow;
+  document.body.style.overflow = "hidden";
+
+  document.body.appendChild(overlay);
+  downloadBtn.focus();
+}
+
 // -------- Preferences page --------
 // Builds a single synthetic setup carrying every preference's/piece's
 // CURRENT effective item (see getEntryEffectiveId above - the chosen
@@ -1664,7 +1966,7 @@ function showConfirmModal(message, onConfirm, options) {
 
   const text = document.createElement("p");
   text.className = "modal-message";
-  text.textContent = message;
+  appendBoldText(text, message); // **double asterisks** = bold
   dialog.appendChild(text);
 
   const actions = document.createElement("div");
@@ -1730,7 +2032,7 @@ function renderPreferences() {
   resetBtn.textContent = "Reset to defaults";
   resetBtn.addEventListener("click", () => {
     showConfirmModal(
-      "Reset ALL preferences back to their defaults?\nThis can't be undone.",
+      "Reset **ALL** preferences back to their defaults?\nThis can't be undone.",
       () => {
         localStorage.removeItem("itemPreferences");
         route();
@@ -1939,6 +2241,267 @@ function buildGridToggle() {
   applyActive();
 }
 
+// -------- Highlighting controls (sidebar) --------
+function hsvToRgb(h, s, v) {
+  const c = v * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = v - c;
+  let r = 0, g = 0, b = 0;
+  if (h < 60) [r, g, b] = [c, x, 0];
+  else if (h < 120) [r, g, b] = [x, c, 0];
+  else if (h < 180) [r, g, b] = [0, c, x];
+  else if (h < 240) [r, g, b] = [0, x, c];
+  else if (h < 300) [r, g, b] = [x, 0, c];
+  else [r, g, b] = [c, 0, x];
+  return [r + m, g + m, b + m].map((n) => Math.round(n * 255));
+}
+
+function rgbToHsv(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  let h = 0;
+  if (d !== 0) {
+    if (max === r) h = 60 * (((g - b) / d) % 6);
+    else if (max === g) h = 60 * ((b - r) / d + 2);
+    else h = 60 * ((r - g) / d + 4);
+  }
+  if (h < 0) h += 360;
+  return { h, s: max === 0 ? 0 : d / max, v: max };
+}
+
+function rgbToHex(r, g, b) {
+  return "#" + [r, g, b].map((n) => n.toString(16).padStart(2, "0")).join("");
+}
+
+function buildHighlightControls() {
+  const el = document.getElementById("highlight-controls");
+  if (!el) return;
+  el.innerHTML = "";
+
+  const makeIcon = (file) => {
+    const img = document.createElement("img");
+    img.className = "highlight-icon";
+    img.src = `assets/${file}`;
+    img.alt = "";
+    img.draggable = false;
+    return img;
+  };
+
+  const makeToggle = (name, file, getter, setter) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "highlight-btn";
+    btn.title = name;
+    btn.setAttribute("aria-label", name);
+    btn.appendChild(makeIcon(file));
+    const apply = () => {
+      const on = getter();
+      btn.classList.toggle("is-active", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    };
+    btn.addEventListener("click", () => {
+      setter(!getter());
+      apply();
+    });
+    apply();
+    el.appendChild(btn);
+    return btn;
+  };
+
+  makeToggle(
+    "Only highlight items that are missing from the inventory and ignore order",
+    "unordered_highlight_icon.png",
+    getHighlightUnordered,
+    setHighlightUnordered
+  );
+  makeToggle("Enable highlighting", "highlight_icon.png", getHighlightEnabled, setHighlightEnabled);
+
+  // Colour button (icon + a bar underneath showing the selected colour)
+  // with an inline wheel panel
+  const colorBtn = document.createElement("button");
+  colorBtn.type = "button";
+  colorBtn.className = "highlight-btn highlight-color-btn";
+  colorBtn.title = "Edit highlight colour";
+  colorBtn.setAttribute("aria-label", "Highlight colour");
+  colorBtn.appendChild(makeIcon("highlight_color_icon.png"));
+  const swatch = document.createElement("span");
+  swatch.className = "highlight-swatch";
+  colorBtn.appendChild(swatch);
+  el.appendChild(colorBtn);
+
+  const panel = document.createElement("div");
+  panel.className = "highlight-wheel-panel";
+  panel.hidden = true;
+
+  const SIZE = 150;
+  const R = SIZE / 2;
+  const canvas = document.createElement("canvas");
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+  canvas.className = "highlight-wheel";
+  panel.appendChild(canvas);
+
+  const brightness = document.createElement("input");
+  brightness.type = "range";
+  brightness.min = "0";
+  brightness.max = "100";
+  brightness.className = "highlight-brightness";
+  brightness.setAttribute("aria-label", "Brightness");
+  panel.appendChild(brightness);
+
+  const hexInput = document.createElement("input");
+  hexInput.type = "text";
+  hexInput.className = "highlight-hex";
+  hexInput.maxLength = 9;
+  hexInput.spellcheck = false;
+  hexInput.autocomplete = "off";
+  hexInput.placeholder = "#FFFF0000";
+  hexInput.title = "Highlight colour code (#AARRGGBB or #RRGGBB) - paste a known value here";
+  hexInput.setAttribute("aria-label", "Highlight colour code");
+  const hexRow = document.createElement("div");
+  hexRow.className = "highlight-hex-row";
+  hexRow.appendChild(hexInput);
+
+  const resetBtn = document.createElement("button");
+  resetBtn.type = "button";
+  resetBtn.className = "highlight-reset-btn";
+  resetBtn.textContent = "Reset";
+  resetBtn.title = "Reset highlight colour to default (#FFFF0000)";
+  resetBtn.setAttribute("aria-label", "Reset highlight colour to default");
+  hexRow.appendChild(resetBtn);
+  panel.appendChild(hexRow);
+  el.appendChild(panel);
+
+  const [r0, g0, b0] = [1, 3, 5].map((i) => parseInt(getHighlightColor().slice(i, i + 2), 16));
+  const state = rgbToHsv(r0, g0, b0);
+  brightness.value = String(Math.round(state.v * 100));
+
+  const ctx = canvas.getContext("2d");
+  const drawWheel = () => {
+    const img = ctx.createImageData(SIZE, SIZE);
+    for (let y = 0; y < SIZE; y++) {
+      for (let x = 0; x < SIZE; x++) {
+        const dx = x + 0.5 - R;
+        const dy = y + 0.5 - R;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const i = (y * SIZE + x) * 4;
+        if (dist > R) {
+          img.data[i + 3] = 0;
+          continue;
+        }
+        let hue = (Math.atan2(dy, dx) * 180) / Math.PI;
+        if (hue < 0) hue += 360;
+        const [r, g, b] = hsvToRgb(hue, dist / R, state.v);
+        img.data[i] = r;
+        img.data[i + 1] = g;
+        img.data[i + 2] = b;
+        img.data[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    const ang = (state.h * Math.PI) / 180;
+    const mx = R + Math.cos(ang) * state.s * R;
+    const my = R + Math.sin(ang) * state.s * R;
+    ctx.beginPath();
+    ctx.arc(mx, my, 5, 0, Math.PI * 2);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#fff";
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(mx, my, 6.5, 0, Math.PI * 2);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "#000";
+    ctx.stroke();
+  };
+
+  const commit = () => {
+    const hex = rgbToHex(...hsvToRgb(state.h, state.s, state.v));
+    setHighlightColor(hex);
+    swatch.style.background = hex;
+    hexInput.value = "#FF" + hex.slice(1).toUpperCase();
+    drawWheel();
+  };
+
+  // Accepts #AARRGGBB, AARRGGBB, #RRGGBB or RRGGBB (alpha is ignored - the
+  // export always writes FF). Returns "#rrggbb" or null if not a valid code.
+  const parseColorCode = (text) => {
+    const m = String(text).trim().replace(/^#/, "").match(/^([0-9a-f]{2})?([0-9a-f]{6})$/i);
+    return m ? "#" + m[2].toLowerCase() : null;
+  };
+
+  const applyTypedColor = () => {
+    const hex = parseColorCode(hexInput.value);
+    if (!hex) return false;
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    Object.assign(state, rgbToHsv(r, g, b));
+    brightness.value = String(Math.round(state.v * 100));
+    setHighlightColor(hex);
+    swatch.style.background = hex;
+    drawWheel();
+    return true;
+  };
+
+  hexInput.addEventListener("input", () => {
+    const valid = parseColorCode(hexInput.value) !== null;
+    hexInput.classList.toggle("is-invalid", !valid && hexInput.value.trim() !== "");
+    if (valid) applyTypedColor();
+  });
+  // Tidy up on leaving the box: normalise a valid code, or revert an invalid one
+  hexInput.addEventListener("blur", () => {
+    hexInput.classList.remove("is-invalid");
+    hexInput.value = "#FF" + getHighlightColor().slice(1).toUpperCase();
+  });
+  resetBtn.addEventListener("click", () => {
+    hexInput.classList.remove("is-invalid");
+    hexInput.value = "#FF" + DEFAULT_HIGHLIGHT_COLOR.slice(1).toUpperCase();
+    applyTypedColor();
+  });
+  hexInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") hexInput.blur();
+  });
+
+  const pick = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const dx = ((e.clientX - rect.left) / rect.width) * SIZE - R;
+    const dy = ((e.clientY - rect.top) / rect.height) * SIZE - R;
+    let hue = (Math.atan2(dy, dx) * 180) / Math.PI;
+    if (hue < 0) hue += 360;
+    state.h = hue;
+    state.s = Math.min(1, Math.sqrt(dx * dx + dy * dy) / R);
+    commit();
+  };
+
+  let dragging = false;
+  canvas.addEventListener("pointerdown", (e) => {
+    dragging = true;
+    canvas.setPointerCapture(e.pointerId);
+    pick(e);
+  });
+  canvas.addEventListener("pointermove", (e) => {
+    if (dragging) pick(e);
+  });
+  const stop = () => (dragging = false);
+  canvas.addEventListener("pointerup", stop);
+  canvas.addEventListener("pointercancel", stop);
+
+  brightness.addEventListener("input", () => {
+    state.v = Number(brightness.value) / 100;
+    commit();
+  });
+
+  colorBtn.addEventListener("click", () => {
+    panel.hidden = !panel.hidden;
+    colorBtn.classList.toggle("is-open", !panel.hidden);
+  });
+
+  // Paint initial state without overwriting a stored value
+  swatch.style.background = getHighlightColor();
+  hexInput.value = "#FF" + getHighlightColor().slice(1).toUpperCase();
+  drawWheel();
+}
+
 // Lowercases, drops apostrophes (straight or curly), and collapses/trims
 // whitespace so "kril", "k'ril", "k ril" and "K'Ril " all compare equal.
 function normalizeSearchText(str) {
@@ -2053,6 +2616,8 @@ window.addEventListener("DOMContentLoaded", () => {
   buildSidebar();
   buildFormatToggle();
   buildGridToggle();
+  buildHighlightControls();
+  buildExportSection();
   buildBossSearch();
   route();
 });

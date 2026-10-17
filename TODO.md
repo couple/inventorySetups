@@ -16,7 +16,7 @@
 - Has to be bank tag LAYOUT
 - KQ 1+1 instructions / vod
 - More notes / guides for bosses
-- CM3s prepots
+- CMs prepots
 
 ## Preferences to add
 - Ring of suffering preference for alt (imbue vs non)
@@ -44,6 +44,5 @@
 - Link slug capitalisation
 - Image embed when sending seutp link
 - Toa 400s -> disc guide
-- Better way of generating images
+- Better way of generating images - see lope clues site
 - Mobile for: scurrius, sarachnis, kbd, scurrius
-- Inventory setups colour -> red - highlight items -> true ("hc":"#FFFF0000","hd":true,"fb":true) (other HL setting?)

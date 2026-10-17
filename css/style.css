@@ -97,6 +97,47 @@ a:hover {
   color: var(--accent);
 }
 
+.export-all-btn {
+  display: block;
+  width: 100%;
+  padding: 6px 0;
+  background: var(--panel-2);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-family: inherit;
+}
+
+.export-all-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+
+/* Export popup */
+.modal-dialog.export-modal {
+  max-width: 460px;
+}
+
+.export-modal-title {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  color: var(--text);
+}
+
+.export-modal-steps {
+  margin: 0 0 16px 0;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.export-modal-steps li {
+  margin-bottom: 6px;
+}
+
 .format-toggle-wrap {
   padding: 14px 20px 12px 20px;
   border-bottom: 1px solid var(--border);
@@ -952,4 +993,132 @@ a:hover {
 
 .modal-btn-confirm:hover {
   filter: brightness(1.1);
+}
+
+/* Highlighting controls */
+.highlight-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.highlight-btn {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.highlight-btn:hover {
+  border-color: var(--accent-dim);
+}
+
+.highlight-btn.is-active,
+.highlight-btn.is-open {
+  background: var(--accent-dim);
+  border-color: var(--accent-dim);
+}
+
+.highlight-icon {
+  /* Native size of the source icons (18x18) - keeps them crisp */
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+/* Selected-colour bar, overlaid along the bottom of the colour button so it
+   doesn't make that button taller than the others */
+.highlight-swatch {
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.highlight-wheel-panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 2px 0;
+}
+
+.highlight-wheel-panel[hidden] {
+  display: none;
+}
+
+.highlight-wheel {
+  width: 150px;
+  height: 150px;
+  max-width: 100%;
+  border-radius: 50%;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.highlight-brightness {
+  width: 150px;
+  max-width: 100%;
+}
+
+.highlight-hex-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.highlight-reset-btn {
+  padding: 4px 8px;
+  background: var(--panel-2);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11.5px;
+  font-family: inherit;
+}
+
+.highlight-reset-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+
+.highlight-hex {
+  flex: 1;
+  min-width: 0;
+  width: 110px;
+  max-width: 110px;
+  padding: 4px 6px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11.5px;
+  font-family: monospace;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.highlight-hex:focus {
+  outline: none;
+  border-color: var(--accent-dim);
+}
+
+.highlight-hex.is-invalid {
+  border-color: #e05555;
 }
